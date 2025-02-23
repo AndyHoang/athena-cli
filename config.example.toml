@@ -1,0 +1,10 @@
+[aws]
+region = "eu-west-1"
+workgroup = "primary"
+output_location = "s3://your-athena-results/"
+catalog = "AwsDataCatalog"
+
+[app]
+query_reuse_time = "1h"
+download_dir = "/path/to/downloads"
+max_rows = 1000 

@@ -1,18 +1,29 @@
 use aws_sdk_athena::Client;
 use crate::cli::QueryArgs;
 use anyhow::Result;
-use aws_sdk_athena::types::{QueryExecutionContext, ResultConfiguration, QueryExecutionState};
+use aws_sdk_athena::types::{
+    QueryExecutionContext, ResultConfiguration, QueryExecutionState,
+    ResultReuseConfiguration, ResultReuseByAgeConfiguration
+};
 use polars::prelude::*;
 use std::{thread, time::Duration};
+use byte_unit::Byte;
+use crate::config;
 
 pub async fn execute(client: Client, args: QueryArgs) -> Result<()> {
     println!("Executing query: {}", args.query);
+    
+    let config = config::Config::load()?;
+    let output_location = args.output_location
+        .unwrap_or_else(|| config.aws.output_location.clone());
     
     let query_id = start_query(
         &client,
         &args.database,
         &args.query,
-        &args.workgroup
+        &args.workgroup,
+        args.reuse_time,
+        &output_location,
     ).await?;
     
     println!("Query execution ID: {}", query_id);
@@ -29,17 +40,29 @@ async fn start_query(
     database: &str,
     query: &str,
     workgroup: &str,
+    reuse_duration: Duration,
+    output_location: &str,
 ) -> Result<String> {
     let context = QueryExecutionContext::builder()
         .database(database)
         .build();
 
     let config = ResultConfiguration::builder()
-        .output_location("s3://pp-data-lake-athena-dump/")  // Configure this based on your S3 bucket
+        .output_location(output_location)
         .build();
 
     let result = client
         .start_query_execution()
+        .result_reuse_configuration(
+            ResultReuseConfiguration::builder()
+                .result_reuse_by_age_configuration(
+                    ResultReuseByAgeConfiguration::builder()
+                        .enabled(true)
+                        .max_age_in_minutes(reuse_duration.as_secs() as i32 / 60)
+                        .build()
+                )
+                .build()
+        )
         .query_string(query)
         .query_execution_context(context)
         .result_configuration(config)
@@ -64,7 +87,28 @@ async fn get_query_results(
 
         if let Some(execution) = status.query_execution() {
             match execution.status().unwrap().state().as_ref() {
-                Some(QueryExecutionState::Succeeded) => break,
+                Some(QueryExecutionState::Succeeded) => {
+                    // Print query info once before breaking
+                    if let Some(result_config) = execution.result_configuration() {
+                        if let Some(output_location) = result_config.output_location() {
+                            println!("Results S3 path: {}", output_location);
+                        }
+                    }
+                    
+                    if let Some(statistics) = execution.statistics() {
+                        let data_scanned = statistics.data_scanned_in_bytes().unwrap_or(0);
+                        let is_cached = data_scanned == 0;
+                        println!("Query cache status: {}", if is_cached {
+                            String::from("Results retrieved from cache")
+                        } else {
+                            let formatted_size = Byte::from_bytes(data_scanned as u128)
+                                .get_appropriate_unit(true)
+                                .to_string();
+                            format!("Fresh query execution (scanned {})", formatted_size)
+                        });
+                    }
+                    break;
+                },
                 Some(QueryExecutionState::Failed) | Some(QueryExecutionState::Cancelled) => {
                     return Err(anyhow::anyhow!("Query failed or was cancelled"));
                 }

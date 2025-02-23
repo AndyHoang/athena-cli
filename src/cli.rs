@@ -27,11 +27,14 @@ pub struct QueryArgs {
     #[arg(short, long)]
     pub database: String,
     /// Workgroup name
-    #[arg(short, long, default_value = "primary")]
+    #[arg(short, long)]
     pub workgroup: String,
     /// Query reuse time (e.g., "10m", "2h", "1h30m")
     #[arg(short = 'r', long, value_parser = parse_duration, default_value = "60m")]
     pub reuse_time: Duration,
+    /// S3 output location (overrides config)
+    #[arg(long)]
+    pub output_location: Option<String>,
 }
 
 #[derive(Parser)]

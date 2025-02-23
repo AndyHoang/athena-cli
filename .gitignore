@@ -31,4 +31,35 @@ Thumbs.db
 
 # Test coverage
 /coverage/
-*.profraw 
+*.profraw
+
+# Security scanning
+.gitleaks.toml
+
+# Rust
+debug/
+target/
+**/*.rs.bk
+*.pdb
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env*
+*credentials*
+*credential*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.keystore
+*.jks 

@@ -19,16 +19,29 @@ pub enum Commands {
     ListWorkgroups(WorkgroupArgs),
 }
 
+impl Commands {
+    pub fn get_profile(&self) -> Option<String> {
+        match self {
+            Commands::Query(args) => args.profile.clone(),
+            Commands::ListDatabases(_) => None,
+            Commands::ListWorkgroups(_) => None,
+        }
+    }
+}
+
 #[derive(Parser)]
 pub struct QueryArgs {
     /// SQL query to execute
     pub query: String,
     /// Database name
     #[arg(short, long)]
-    pub database: String,
+    pub database: Option<String>,
     /// Workgroup name
     #[arg(short, long)]
-    pub workgroup: String,
+    pub workgroup: Option<String>,
+    /// AWS Profile name
+    #[arg(short, long)]
+    pub profile: Option<String>,
     /// Query reuse time (e.g., "10m", "2h", "1h30m")
     #[arg(short = 'r', long, value_parser = parse_duration, default_value = "60m")]
     pub reuse_time: Duration,

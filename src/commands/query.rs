@@ -14,14 +14,23 @@ pub async fn execute(client: Client, args: QueryArgs) -> Result<()> {
     println!("Executing query: {}", args.query);
     
     let config = config::Config::load()?;
+    
+    let database = args.database
+        .or_else(|| config.aws.database.clone())
+        .ok_or_else(|| anyhow::anyhow!("Database name is required but was not provided"))?;
+
+    let workgroup = args.workgroup
+        .or_else(|| config.aws.workgroup.clone())
+        .ok_or_else(|| anyhow::anyhow!("Workgroup is required but was not provided"))?;
+
     let output_location = args.output_location
         .unwrap_or_else(|| config.aws.output_location.clone());
     
     let query_id = start_query(
         &client,
-        &args.database,
+        &database,
         &args.query,
-        &args.workgroup,
+        &workgroup,
         args.reuse_time,
         &output_location,
     ).await?;

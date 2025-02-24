@@ -15,6 +15,8 @@ pub struct AwsConfig {
     pub workgroup: Option<String>,
     pub output_location: String,
     pub catalog: Option<String>,
+    pub database: Option<String>,
+    pub profile: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -33,6 +35,8 @@ impl Default for Config {
                 workgroup: Some("primary".to_string()),
                 output_location: "s3://athena-query-results/".to_string(),
                 catalog: Some("AwsDataCatalog".to_string()),
+                database: None,
+                profile: None,
             },
             app: AppConfig {
                 query_reuse_time: Duration::from_secs(3600), // 1 hour

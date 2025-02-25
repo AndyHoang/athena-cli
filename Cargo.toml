@@ -2,6 +2,14 @@
 name = "athena-cli"
 version = "0.1.0"
 edition = "2021"
+description = "A command-line interface for AWS Athena with interactive query execution and result management"
+license = "MIT"
+repository = "https://github.com/Andyhoang/athena-cli"
+documentation = "https://github.com/Andyhoang/athena-cli#readme"
+readme = "README.md"
+keywords = ["aws", "athena", "cli", "database", "sql"]
+categories = ["command-line-utilities", "database"]
+authors = ["Andy Hoang <ngocdunghoangdl@gmail.com>"]
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }

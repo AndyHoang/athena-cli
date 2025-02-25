@@ -17,6 +17,8 @@ pub enum Commands {
     ListDatabases(DatabaseArgs),
     /// List workgroups
     ListWorkgroups(WorkgroupArgs),
+    /// Show query history
+    History(HistoryArgs),
 }
 
 impl Commands {
@@ -25,6 +27,7 @@ impl Commands {
             Commands::Query(args) => args.profile.clone(),
             Commands::ListDatabases(_) => None,
             Commands::ListWorkgroups(_) => None,
+            Commands::History(_) => None,
         }
     }
 }
@@ -62,4 +65,17 @@ pub struct WorkgroupArgs {
     /// Maximum number of workgroups to list
     #[arg(short, long, default_value = "50")]
     pub limit: i32,
+}
+
+#[derive(Parser)]
+pub struct HistoryArgs {
+    /// Workgroup to show history for
+    #[arg(short, long)]
+    pub workgroup: Option<String>,
+    /// Maximum number of history items to show (overrides config)
+    #[arg(short, long)]
+    pub limit: Option<i32>,
+    /// Show only queries with specific status (SUCCEEDED, FAILED, CANCELLED)
+    #[arg(short, long)]
+    pub status: Option<String>,
 } 

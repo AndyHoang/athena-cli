@@ -83,6 +83,9 @@ async fn main() -> Result<()> {
         cli::Commands::ListWorkgroups(args) => {
             commands::workgroup::list(client, args).await?;
         }
+        cli::Commands::History(args) => {
+            commands::history::list(client, args).await?;
+        }
     }
     
     Ok(())

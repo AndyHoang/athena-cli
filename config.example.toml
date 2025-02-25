@@ -7,4 +7,5 @@ catalog = "AwsDataCatalog"
 [app]
 query_reuse_time = "1h"
 download_dir = "/path/to/downloads"
-max_rows = 1000 
+max_rows = 1000
+history_size = 20 

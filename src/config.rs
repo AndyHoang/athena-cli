@@ -19,12 +19,33 @@ pub struct AwsConfig {
     pub profile: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub enum HistorySortBy {
+    StartTime,
+    EndTime,
+    DataScanned,
+    Status,
+}
+
+impl Default for HistorySortBy {
+    fn default() -> Self {
+        Self::StartTime
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
     #[serde(with = "humantime_serde")]
     pub query_reuse_time: Duration,
     pub download_dir: PathBuf,
     pub max_rows: usize,
+    /// Default number of history items to show
+    #[serde(default = "default_history_size")]
+    pub history_size: i32,
+}
+
+fn default_history_size() -> i32 {
+    20
 }
 
 impl Default for Config {
@@ -42,6 +63,7 @@ impl Default for Config {
                 query_reuse_time: Duration::from_secs(3600), // 1 hour
                 download_dir: dirs::download_dir().unwrap_or_else(|| PathBuf::from(".")),
                 max_rows: 1000,
+                history_size: 20,
             },
         }
     }

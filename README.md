@@ -38,3 +38,24 @@ For configuration, edit `~/.config/aws-athena-cli/config.toml` to set:
 - Rust 1.70+
 
 For detailed documentation and examples, see the [Wiki](link-to-wiki).
+
+## Milestones
+
+### Completed ✅
+- [x] Basic query execution with AWS Athena
+- [x] Configuration management with TOML config file
+- [x] Query result caching and reuse
+- [x] Polars integration for DataFrame handling
+- [x] Query history tracking
+- [x] Result compression support
+
+### Coming Soon 🚀
+
+- [ ] Get detail a history query
+- [ ] Database schema exploration
+- [ ] Export results to various formats (CSV, JSON, Parquet)
+- [ ] Custom output formatting
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.

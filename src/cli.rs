@@ -1,80 +1,84 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, Args};
 use std::time::Duration;
 use humantime::parse_duration;
+
+// Shared AWS arguments used by multiple commands
+#[derive(Args, Clone, Default)]
+pub struct AwsArgs {
+    /// AWS Profile name
+    #[arg(short, long, global = true)]
+    pub profile: Option<String>,
+    
+    /// Workgroup name
+    #[arg(short, long, global = true)]
+    pub workgroup: Option<String>,
+    
+    /// Database name
+    #[arg(short, long, global = true)]
+    pub database: Option<String>,
+    
+    /// Catalog name
+    #[arg(long, global = true, default_value = "AwsDataCatalog")]
+    pub catalog: Option<String>,
+}
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
+    
+    #[command(flatten)]
+    pub aws: AwsArgs,
 }
 
 #[derive(Subcommand)]
 pub enum Commands {
     /// Execute a query
     Query(QueryArgs),
+    
     /// List available databases
     ListDatabases(DatabaseArgs),
+    
     /// List workgroups
     ListWorkgroups(WorkgroupArgs),
+    
     /// Show query history
     History(HistoryArgs),
 }
 
-impl Commands {
-    pub fn get_profile(&self) -> Option<String> {
-        match self {
-            Commands::Query(args) => args.profile.clone(),
-            Commands::ListDatabases(_) => None,
-            Commands::ListWorkgroups(_) => None,
-            Commands::History(_) => None,
-        }
-    }
-}
-
-#[derive(Parser)]
+#[derive(Args, Clone)]
 pub struct QueryArgs {
     /// SQL query to execute
     pub query: String,
-    /// Database name
-    #[arg(short, long)]
-    pub database: Option<String>,
-    /// Workgroup name
-    #[arg(short, long)]
-    pub workgroup: Option<String>,
-    /// AWS Profile name
-    #[arg(short, long)]
-    pub profile: Option<String>,
+    
     /// Query reuse time (e.g., "10m", "2h", "1h30m")
     #[arg(short = 'r', long, value_parser = parse_duration, default_value = "60m")]
     pub reuse_time: Duration,
+    
     /// S3 output location (overrides config)
     #[arg(long)]
     pub output_location: Option<String>,
 }
 
-#[derive(Parser)]
+#[derive(Args, Clone)]
 pub struct DatabaseArgs {
-    /// Catalog name
-    #[arg(short, long, default_value = "AwsDataCatalog")]
-    pub catalog: String,
+    // Empty - will use global catalog from AwsArgs
 }
 
-#[derive(Parser)]
+#[derive(Args, Clone)]
 pub struct WorkgroupArgs {
     /// Maximum number of workgroups to list
     #[arg(short, long, default_value = "50")]
     pub limit: i32,
 }
 
-#[derive(Parser)]
+#[derive(Args, Clone)]
 pub struct HistoryArgs {
-    /// Workgroup to show history for
-    #[arg(short, long)]
-    pub workgroup: Option<String>,
     /// Maximum number of history items to show (overrides config)
     #[arg(short, long)]
     pub limit: Option<i32>,
+    
     /// Show only queries with specific status (SUCCEEDED, FAILED, CANCELLED)
     #[arg(short, long)]
     pub status: Option<String>,

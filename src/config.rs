@@ -42,6 +42,9 @@ pub struct AppConfig {
     /// Default number of history items to show
     #[serde(default = "default_history_size")]
     pub history_size: i32,
+    /// Fields to display in history view
+    #[serde(default)]
+    pub history_fields: Option<Vec<String>>,
 }
 
 fn default_history_size() -> i32 {
@@ -64,6 +67,7 @@ impl Default for Config {
                 download_dir: dirs::download_dir().unwrap_or_else(|| PathBuf::from(".")),
                 max_rows: 1000,
                 history_size: 20,
+                history_fields: None,
             },
         }
     }

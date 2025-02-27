@@ -1,4 +1,5 @@
 use aws_sdk_athena::Client;
+use crate::cli;
 use crate::cli::QueryArgs;
 use anyhow::Result;
 use aws_sdk_athena::types::{
@@ -10,16 +11,21 @@ use std::{thread, time::Duration};
 use byte_unit::Byte;
 use crate::config;
 
-pub async fn execute(client: Client, args: QueryArgs) -> Result<()> {
+pub async fn execute(
+    client: aws_sdk_athena::Client, 
+    args: cli::QueryArgs,
+    database: Option<String>,
+    workgroup: Option<String>
+) -> Result<()> {
     println!("Executing query: {}", args.query);
     
     let config = config::Config::load()?;
     
-    let database = args.database
+    let database = database
         .or_else(|| config.aws.database.clone())
         .ok_or_else(|| anyhow::anyhow!("Database name is required but was not provided"))?;
 
-    let workgroup = args.workgroup
+    let workgroup = workgroup
         .or_else(|| config.aws.workgroup.clone())
         .ok_or_else(|| anyhow::anyhow!("Workgroup is required but was not provided"))?;
 

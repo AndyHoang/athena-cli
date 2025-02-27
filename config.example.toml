@@ -8,4 +8,5 @@ catalog = "AwsDataCatalog"
 query_reuse_time = "1h"
 download_dir = ""
 max_rows = 1000
-history_size = 20 
+history_size = 20
+history_fields = ["Id", "Status", "Query", "StartTime", "EndTime", "DataScanned", "Runtime", "OutputLocation"]

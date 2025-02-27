@@ -13,11 +13,11 @@ use aws_config::profile::ProfileFileCredentialsProvider;
 async fn main() -> Result<()> {
     let cli = cli::Cli::parse();
     let config = config::Config::load()?;
-    let region = config.aws.region.unwrap_or_else(|| "eu-west-1".to_string());
     
-    // First check for profile in CLI args or config file
-    let profile = cli.command.get_profile().or(config.aws.profile.clone());
+    // With global=true, these args are available directly from cli.aws
+    let profile = cli.aws.profile.or(config.aws.profile.clone());
     let profile_for_errors = profile.clone();
+    let region = config.aws.region.unwrap_or_else(|| "eu-west-1".to_string());
     
     let aws_config = if let Some(name) = profile {
         // Use the specified profile
@@ -81,11 +81,30 @@ async fn main() -> Result<()> {
 
     // Create Athena client and execute command
     let client = aws_sdk_athena::Client::new(&aws_config);
-    let result = match cli.command {
-        cli::Commands::Query(args) => commands::query::execute(client, args).await,
-        cli::Commands::ListDatabases(args) => commands::database::list(client, args).await,
-        cli::Commands::ListWorkgroups(args) => commands::workgroup::list(client, args).await,
-        cli::Commands::History(args) => commands::history::list(client, args).await,
+    
+    // Pass the appropriate arguments to each command
+    let result = match &cli.command {
+        cli::Commands::Query(args) => {
+            let database = cli.aws.database.or(config.aws.database.clone());
+            let workgroup = cli.aws.workgroup.or(config.aws.workgroup.clone());
+            commands::query::execute(
+                client, 
+                args.clone(), 
+                database, 
+                workgroup
+            ).await
+        },
+        cli::Commands::ListDatabases(_) => {
+            let catalog = cli.aws.catalog.unwrap_or_else(|| "AwsDataCatalog".to_string());
+            commands::database::list(client, catalog).await
+        },
+        cli::Commands::ListWorkgroups(args) => {
+            commands::workgroup::list(client, args.clone()).await
+        },
+        cli::Commands::History(args) => {
+            let workgroup = cli.aws.workgroup.or(config.aws.workgroup.clone());
+            commands::history::list(client, args.clone(), workgroup).await
+        },
     };
     
     // Handle credential errors with helpful suggestions

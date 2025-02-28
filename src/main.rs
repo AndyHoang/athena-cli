@@ -1,13 +1,13 @@
 mod cli;
 mod commands;
 mod config;
+mod aws;
 
 use clap::Parser;
 use anyhow::Result;
-use aws_config::{Region, BehaviorVersion};
-use dialoguer::{Confirm, Input};
-use std::process::Command;
-use aws_config::profile::ProfileFileCredentialsProvider;
+use aws_sdk_athena::Client as AthenaClient;
+// Uncomment if you need to use S3 client
+// use aws_sdk_s3::Client as S3Client;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -16,71 +16,24 @@ async fn main() -> Result<()> {
     
     // With global=true, these args are available directly from cli.aws
     let profile = cli.aws.profile.or(config.aws.profile.clone());
-    let profile_for_errors = profile.clone();
     let region = config.aws.region.unwrap_or_else(|| "eu-west-1".to_string());
     
-    let aws_config = if let Some(name) = profile {
-        // Use the specified profile
-        println!("Using AWS profile: {}", name);
-        
-        let provider = ProfileFileCredentialsProvider::builder()
-            .profile_name(&name)
-            .build();
-            
-        aws_config::defaults(BehaviorVersion::latest())
-            .credentials_provider(provider)
-            .region(Region::new(region))
-            .load()
-            .await
-    } else if std::env::var("AWS_ACCESS_KEY_ID").is_ok() && 
-              std::env::var("AWS_SECRET_ACCESS_KEY").is_ok() {
-        // Fallback to environment variables if available
-        println!("Using AWS credentials from environment variables");
-        
-        aws_config::defaults(BehaviorVersion::latest())
-            .region(Region::new(region))
-            .load()
-            .await
-    } else {
-        // No credentials found, prompt for login
-        println!("No AWS credentials found in profile or environment variables");
-        
-        if Confirm::new()
-            .with_prompt("Would you like to login with AWS SSO?")
-            .default(true)
-            .interact()? 
-        {
-            let profile: String = Input::new()
-                .with_prompt("Enter your AWS profile name")
-                .interact()?;
+    // Build AWS configuration using our extracted module
+    let aws_config = aws::build_aws_config(profile.clone(), region.clone()).await?;
 
-            println!("Initiating AWS SSO login...");
-            let status = Command::new("aws")
-                .args(["sso", "login", "--profile", &profile])
-                .status()?;
-
-            if !status.success() {
-                println!("SSO login failed. Please try again manually with:");
-                println!("aws sso login --profile {}", profile);
-                return Err(anyhow::anyhow!("Please rerun the program after logging in"));
-            }
-            
-            let provider = ProfileFileCredentialsProvider::builder()
-                .profile_name(&profile)
-                .build();
-                
-            aws_config::defaults(BehaviorVersion::latest())
-                .credentials_provider(provider)
-                .region(Region::new(region))
-                .load()
-                .await
-        } else {
-            return Err(anyhow::anyhow!("AWS credentials are required to continue"));
-        }
-    };
-
-    // Create Athena client and execute command
-    let client = aws_sdk_athena::Client::new(&aws_config);
+    // Create Athena client
+    let client = AthenaClient::new(&aws_config);
+    
+    // Example of creating an S3 client using the same configuration
+    // This is commented out since it's not used in this application yet
+    // let s3_client = aws::create_s3_client(profile.clone(), region.clone()).await?;
+    
+    // Alternative way to create clients using the generic function
+    // let s3_client = aws::create_aws_client::<aws_sdk_s3::Client, _>(
+    //     profile.clone(), 
+    //     region.clone(),
+    //     |config| aws_sdk_s3::Client::new(config)
+    // ).await?;
     
     // Pass the appropriate arguments to each command
     let result = match &cli.command {
@@ -112,26 +65,7 @@ async fn main() -> Result<()> {
     
     // Handle credential errors with helpful suggestions
     if let Err(err) = result {
-        let err_string = format!("{:?}", err);
-        
-        if err_string.contains("ForbiddenException") || 
-           err_string.contains("AccessDenied") ||
-           err_string.contains("ExpiredToken") ||
-           err_string.contains("credentials") || 
-           err_string.contains("auth") {
-            
-            println!("AWS Authentication Error: Your credentials may be expired or insufficient.");
-            
-            if let Some(profile_name) = profile_for_errors {
-                println!("\nPlease run: aws sso login --profile {}", profile_name);
-            } else {
-                println!("\nPlease set valid AWS credentials or configure a profile.");
-            }
-            
-            return Err(anyhow::anyhow!("Authentication failure"));
-        }
-        
-        return Err(err);
+        return Err(aws::handle_aws_auth_error(err, profile));
     }
     
     Ok(())

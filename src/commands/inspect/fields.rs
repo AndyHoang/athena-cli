@@ -4,6 +4,7 @@ use std::time::Duration;
 use aws_sdk_athena::types::QueryExecution;
 use crate::config;
 use byte_unit::Byte;
+use crate::commands::common::{DisplayValue, OptionDisplayValue, ByteDisplay, OptionDurationFormat};
 
 // Define all possible fields that can be displayed in the inspect command
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -123,51 +124,47 @@ pub fn get_inspect_fields() -> Vec<InspectField> {
 // Extract a field value from a query execution
 pub fn get_field_value(execution: &QueryExecution, field: InspectField) -> String {
     match field {
-        InspectField::Id => execution.query_execution_id().unwrap_or("-").to_string(),
+        InspectField::Id => execution.query_execution_id().to_display_value_or_default(),
         
         InspectField::Status => execution.status()
             .and_then(|s| s.state())
-            .map(|s| s.as_str().to_string())
-            .unwrap_or_else(|| "-".to_string()),
+            .map(|s| s.as_str())
+            .to_display_value_or_default(),
         
         InspectField::StatusReason => execution.status()
             .and_then(|s| s.state_change_reason())
-            .unwrap_or("-").to_string(),
+            .to_display_value_or_default(),
         
-        InspectField::Query => execution.query().unwrap_or("-").to_string(),
+        InspectField::Query => execution.query().to_display_value_or_default(),
             
         InspectField::SubmissionTime => execution.status()
             .and_then(|s| s.submission_date_time())
-            .map(|t| format!("{}", t))
-            .unwrap_or_else(|| "-".to_string()),
+            .to_display_value_or_default(),
             
         InspectField::CompletionTime => execution.status()
             .and_then(|s| s.completion_date_time())
-            .map(|t| format!("{}", t))
-            .unwrap_or_else(|| "-".to_string()),
+            .to_display_value_or_default(),
             
         InspectField::Database => execution.query_execution_context()
             .and_then(|c| c.database())
-            .unwrap_or("-").to_string(),
+            .to_display_value_or_default(),
             
         InspectField::Catalog => execution.query_execution_context()
             .and_then(|c| c.catalog())
-            .unwrap_or("-").to_string(),
+            .to_display_value_or_default(),
             
-        InspectField::Workgroup => execution.work_group().unwrap_or("-").to_string(),
+        InspectField::Workgroup => execution.work_group().to_display_value_or_default(),
             
         InspectField::DataScanned => execution.statistics()
             .and_then(|s| s.data_scanned_in_bytes())
-            .map(|b| Byte::from_i64(b as i64)
-                .map(|b| b.get_appropriate_unit(byte_unit::UnitType::Decimal).to_string())
-                .unwrap_or_else(|| "-".to_string()))
+            .map(|b| b as i64)
+            .map(|b| b.format_bytes())
             .unwrap_or_else(|| "-".to_string()),
             
         InspectField::CacheStatus => {
-            // Check if data scanned is 0 (indicating cache was used)
             let data_scanned = execution.statistics()
                 .and_then(|s| s.data_scanned_in_bytes())
-                .unwrap_or(1); // Default to non-zero if not available
+                .unwrap_or(1);
             
             if data_scanned == 0 {
                 "Used cache".to_string()
@@ -178,47 +175,26 @@ pub fn get_field_value(execution: &QueryExecution, field: InspectField) -> Strin
             
         InspectField::EngineExecutionTime => execution.statistics()
             .and_then(|s| s.engine_execution_time_in_millis())
-            .map(|ms| {
-                let duration = Duration::from_millis(ms as u64);
-                humantime::format_duration(duration).to_string()
-            })
-            .unwrap_or_else(|| "-".to_string()),
+            .format_duration_ms_or_default(),
             
         InspectField::TotalExecutionTime => execution.statistics()
             .and_then(|s| s.total_execution_time_in_millis())
-            .map(|ms| {
-                let duration = Duration::from_millis(ms as u64);
-                humantime::format_duration(duration).to_string()
-            })
-            .unwrap_or_else(|| "-".to_string()),
+            .format_duration_ms_or_default(),
             
         InspectField::QueryPlanningTime => execution.statistics()
             .and_then(|s| s.query_planning_time_in_millis())
-            .map(|ms| {
-                let duration = Duration::from_millis(ms as u64);
-                humantime::format_duration(duration).to_string()
-            })
-            .unwrap_or_else(|| "-".to_string()),
+            .format_duration_ms_or_default(),
             
         InspectField::QueryQueueTime => execution.statistics()
             .and_then(|s| s.query_queue_time_in_millis())
-            .map(|ms| {
-                let duration = Duration::from_millis(ms as u64);
-                humantime::format_duration(duration).to_string()
-            })
-            .unwrap_or_else(|| "-".to_string()),
+            .format_duration_ms_or_default(),
             
         InspectField::ServiceProcessingTime => execution.statistics()
             .and_then(|s| s.service_processing_time_in_millis())
-            .map(|ms| {
-                let duration = Duration::from_millis(ms as u64);
-                humantime::format_duration(duration).to_string()
-            })
-            .unwrap_or_else(|| "-".to_string()),
+            .format_duration_ms_or_default(),
             
         InspectField::OutputLocation => execution.result_configuration()
             .and_then(|c| c.output_location())
-            .unwrap_or("-")
-            .to_string(),
+            .to_display_value_or_default(),
     }
 } 

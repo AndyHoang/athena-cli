@@ -122,10 +122,9 @@ pub fn get_field_value(execution: &QueryExecution, field: HistoryField) -> Strin
             
         HistoryField::DataScanned => execution.statistics()
             .and_then(|s| s.data_scanned_in_bytes())
-            .map(|b| {
-                let bytes = byte_unit::Byte::from_bytes(b as u128);
-                bytes.get_appropriate_unit(true).to_string()
-            })
+            .map(|b| byte_unit::Byte::from_i64(b as i64)
+                .map(|b| b.get_appropriate_unit(byte_unit::UnitType::Decimal).to_string())
+                .unwrap_or_else(|| "-".to_string()))
             .unwrap_or_else(|| "-".to_string()),
             
         HistoryField::Runtime => execution.statistics()

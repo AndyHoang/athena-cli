@@ -116,9 +116,9 @@ async fn get_query_results(
                         println!("Query cache status: {}", if is_cached {
                             String::from("Results retrieved from cache")
                         } else {
-                            let formatted_size = Byte::from_bytes(data_scanned as u128)
-                                .get_appropriate_unit(true)
-                                .to_string();
+                            let formatted_size = Byte::from_i64(data_scanned as i64)
+                                .map(|b| b.get_appropriate_unit(byte_unit::UnitType::Decimal).to_string())
+                                .unwrap_or_else(|| "-".to_string());
                             format!("Fresh query execution (scanned {})", formatted_size)
                         });
                     }
@@ -194,8 +194,9 @@ async fn get_query_results(
     // Create DataFrame
     let series: Vec<Series> = all_columns.iter()
         .zip(column_names.iter())
-        .map(|(col, name)| Series::new(name, col))
+        .map(|(col, name)| Series::new(name.into(), col))
         .collect();
 
-    Ok(DataFrame::new(series)?)
+    // Convert Series to Columns and create DataFrame
+    Ok(DataFrame::new(series.into_iter().map(|s| s.into_column()).collect())?)
 } 

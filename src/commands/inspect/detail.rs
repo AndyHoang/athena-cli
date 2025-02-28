@@ -1,5 +1,5 @@
 use aws_sdk_athena::Client;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use prettytable::{Table, Row, Cell};
 use crate::cli::InspectArgs;
 use super::fields::{get_inspect_fields, get_field_value};
@@ -54,13 +54,11 @@ pub async fn detail(client: Client, args: InspectArgs) -> Result<()> {
                     
                     println!("Query results S3 location: {}", s3_output_location);
                     
-                    // Create a new S3 client with default config
-                    // We need to create a new config since we can't easily share the Athena client's config
-                    let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-                    let s3_client = aws_sdk_s3::Client::new(&config);
+                    // Use the aws module's create_s3_client function with required parameters
+                    let s3_client = crate::aws::create_s3_client(None, "eu-west-1".to_string()).await?;
                     
                     println!("Attempting to download from S3...");
-                    match download_from_s3(&s3_client, &s3_output_location, output_dir, &query_id).await {
+                    match download_from_s3(&s3_client, s3_output_location, output_dir, &query_id).await {
                         Ok(file_path) => println!("\nQuery results downloaded to: {}", file_path.display()),
                         Err(e) => println!("\nError downloading results: {}", e),
                     }

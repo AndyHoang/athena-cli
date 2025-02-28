@@ -1,6 +1,5 @@
 use aws_sdk_athena::Client;
 use crate::cli;
-use crate::cli::QueryArgs;
 use anyhow::Result;
 use aws_sdk_athena::types::{
     QueryExecutionContext, ResultConfiguration, QueryExecutionState,
@@ -116,7 +115,7 @@ async fn get_query_results(
                         println!("Query cache status: {}", if is_cached {
                             String::from("Results retrieved from cache")
                         } else {
-                            let formatted_size = Byte::from_i64(data_scanned as i64)
+                            let formatted_size = Byte::from_i64(data_scanned)
                                 .map(|b| b.get_appropriate_unit(byte_unit::UnitType::Decimal).to_string())
                                 .unwrap_or_else(|| "-".to_string());
                             format!("Fresh query execution (scanned {})", formatted_size)
@@ -149,7 +148,7 @@ async fn get_query_results(
 
     // Initialize column names from first result
     if let Some(rs) = results.result_set() {
-        if let Some(first_row) = rs.rows().get(0) {
+        if let Some(first_row) = rs.rows().first() {
             column_names = first_row.data()
                 .iter()
                 .map(|d| d.var_char_value().unwrap_or_default().to_string())

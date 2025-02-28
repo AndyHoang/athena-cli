@@ -1,10 +1,8 @@
 use std::fmt;
 use std::str::FromStr;
-use std::time::Duration;
 use aws_sdk_athena::types::QueryExecution;
 use crate::config;
-use byte_unit::Byte;
-use crate::commands::common::{DisplayValue, OptionDisplayValue, ByteDisplay, OptionDurationFormat, OptionByteDisplay};
+use crate::commands::common::{OptionDisplayValue, OptionDurationFormat, OptionByteDisplay};
 
 // Define all possible fields that can be displayed in the inspect command
 #[derive(Debug, Clone, Copy, PartialEq)]

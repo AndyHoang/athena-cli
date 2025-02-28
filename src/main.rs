@@ -105,6 +105,9 @@ async fn main() -> Result<()> {
             let workgroup = cli.aws.workgroup.or(config.aws.workgroup.clone());
             commands::history::list(client, args.clone(), workgroup).await
         },
+        cli::Commands::Inspect(args) => {
+            commands::inspect::inspect(client, args.clone()).await
+        },
     };
     
     // Handle credential errors with helpful suggestions

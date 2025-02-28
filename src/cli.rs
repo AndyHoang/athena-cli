@@ -45,6 +45,9 @@ pub enum Commands {
     
     /// Show query history
     History(HistoryArgs),
+
+    /// Inspect details of a specific query
+    Inspect(InspectArgs),
 }
 
 #[derive(Args, Clone)]
@@ -82,4 +85,10 @@ pub struct HistoryArgs {
     /// Show only queries with specific status (SUCCEEDED, FAILED, CANCELLED)
     #[arg(short, long)]
     pub status: Option<String>,
+}
+
+#[derive(Args, Clone)]
+pub struct InspectArgs {
+    /// Query execution ID to inspect
+    pub query_id: String,
 } 

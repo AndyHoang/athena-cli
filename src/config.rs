@@ -45,6 +45,9 @@ pub struct AppConfig {
     /// Fields to display in history view
     #[serde(default)]
     pub history_fields: Option<Vec<String>>,
+    /// Fields to display in inspect view
+    #[serde(default)]
+    pub inspect_fields: Option<Vec<String>>,
 }
 
 fn default_history_size() -> i32 {
@@ -68,6 +71,7 @@ impl Default for Config {
                 max_rows: 1000,
                 history_size: 20,
                 history_fields: None,
+                inspect_fields: None,
             },
         }
     }

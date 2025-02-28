@@ -91,4 +91,8 @@ pub struct HistoryArgs {
 pub struct InspectArgs {
     /// Query execution ID to inspect
     pub query_id: String,
+    
+    /// Output directory for query results (e.g., "." for current directory)
+    #[arg(short, long)]
+    pub output: Option<String>,
 } 

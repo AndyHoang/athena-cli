@@ -4,7 +4,7 @@ use std::time::Duration;
 use aws_sdk_athena::types::QueryExecution;
 use crate::config;
 use byte_unit;
-use crate::commands::common::{DisplayValue, OptionDisplayValue, ByteDisplay, OptionDurationFormat};
+use crate::commands::common::{DisplayValue, OptionDisplayValue, ByteDisplay, OptionDurationFormat, OptionByteDisplay};
 
 // Define all possible fields that can be displayed
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -121,9 +121,7 @@ pub fn get_field_value(execution: &QueryExecution, field: HistoryField) -> Strin
             
         HistoryField::DataScanned => execution.statistics()
             .and_then(|s| s.data_scanned_in_bytes())
-            .map(|b| b as i64)
-            .map(|b| b.format_bytes())
-            .unwrap_or_else(|| "-".to_string()),
+            .format_bytes_or_default(),
             
         HistoryField::Runtime => execution.statistics()
             .and_then(|s| s.engine_execution_time_in_millis())

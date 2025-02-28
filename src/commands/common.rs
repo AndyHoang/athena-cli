@@ -73,6 +73,17 @@ impl ByteDisplay for i64 {
     }
 }
 
+pub trait OptionByteDisplay {
+    fn format_bytes_or_default(&self) -> String;
+}
+
+impl<T: Into<i64> + Copy> OptionByteDisplay for Option<T> {
+    fn format_bytes_or_default(&self) -> String {
+        self.map(|b| b.into().format_bytes())
+            .unwrap_or_else(|| "-".to_string())
+    }
+}
+
 // Helper for converting milliseconds to duration string
 pub trait DurationFormat {
     fn format_duration_ms(&self) -> String;

@@ -16,6 +16,7 @@ pub enum HistoryField {
     Runtime,
     OutputLocation,
     Cache,
+    RowCount,
 }
 
 // Add FromStr implementation for parsing from config
@@ -33,6 +34,7 @@ impl FromStr for HistoryField {
             "Runtime" => Ok(HistoryField::Runtime),
             "OutputLocation" => Ok(HistoryField::OutputLocation),
             "Cache" => Ok(HistoryField::Cache),
+            "RowCount" => Ok(HistoryField::RowCount),
             _ => Err(format!("Unknown history field: {}", s)),
         }
     }
@@ -50,6 +52,7 @@ impl fmt::Display for HistoryField {
             HistoryField::Runtime => write!(f, "Runtime"),
             HistoryField::OutputLocation => write!(f, "Output Location"),
             HistoryField::Cache => write!(f, "Cache"),
+            HistoryField::RowCount => write!(f, "Row Count"),
         }
     }
 }
@@ -64,6 +67,7 @@ pub fn default_history_fields() -> Vec<HistoryField> {
         HistoryField::EndTime,
         HistoryField::DataScanned,
         HistoryField::Runtime,
+        HistoryField::RowCount,
         HistoryField::OutputLocation,
         HistoryField::Cache,
     ]
@@ -139,6 +143,13 @@ pub fn get_field_value(execution: &QueryExecution, field: HistoryField) -> Strin
             } else {
                 "-".to_string()
             }
+        },
+        
+        HistoryField::RowCount => {
+            // The row count is not directly available in QueryExecution
+            // We'll need to fetch it separately using get_query_runtime_statistics
+            // For now, return a placeholder
+            "-".to_string()
         },
     }
 } 

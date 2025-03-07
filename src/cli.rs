@@ -1,7 +1,6 @@
 use clap::{Parser, Subcommand, Args};
 use std::time::Duration;
 use humantime::parse_duration;
-use crate::config;
 
 // Shared AWS arguments used by multiple commands
 #[derive(Args, Clone, Default)]
@@ -137,16 +136,4 @@ pub struct DownloadArgs {
     pub output: OutputArgs,
 }
 
-fn default_workgroup() -> String {
-    config::Config::load()
-        .ok()
-        .and_then(|c| c.aws.workgroup)
-        .unwrap_or_else(|| "primary".to_string())
-}
-
-fn default_region() -> String {
-    config::Config::load()
-        .ok()
-        .and_then(|c| c.aws.region)
-        .unwrap_or_else(|| "eu-west-1".to_string())
-} 
+ 

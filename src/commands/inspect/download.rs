@@ -28,10 +28,9 @@ pub async fn download_from_s3(
         .ok_or_else(|| anyhow!("Invalid S3 URL: no host in {}", s3_url))?;
     
     // Handle different S3 URL formats
-    let (bucket, key) = if s3_url.starts_with("s3://") {
+    let (bucket, key) = if let Some(stripped) = s3_url.strip_prefix("s3://") {
         // s3://bucket-name/key format
-        let path = &s3_url[5..]; // Remove "s3://"
-        let parts: Vec<&str> = path.splitn(2, '/').collect();
+        let parts: Vec<&str> = stripped.splitn(2, '/').collect();
         
         if parts.len() < 2 {
             return Err(anyhow!("Invalid S3 URL format (s3://): {}", s3_url));

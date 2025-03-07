@@ -84,19 +84,8 @@ impl Context {
         aws_sdk_athena::Client::new(&self.aws_config)
     }
 
-    pub fn create_s3_client(&self) -> aws_sdk_s3::Client {
-        aws_sdk_s3::Client::new(&self.aws_config)
-    }
-
     pub fn quiet(&self) -> bool {
         self.display_args.quiet
-    }
-
-    pub fn download_dir(&self) -> String {
-        self.config.app.download_dir
-            .to_str()
-            .unwrap_or(".")
-            .to_string()
     }
 
     pub fn history_size(&self) -> i32 {

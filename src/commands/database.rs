@@ -1,11 +1,14 @@
-use aws_sdk_athena::Client;
 use anyhow::Result;
+use crate::context::Context;
 
-pub async fn list(client: Client, catalog: String) -> Result<()> {
-    println!("Listing databases in catalog: {}", catalog);
+pub async fn list(ctx: &Context) -> Result<()> {
+    let client = ctx.create_athena_client();
     
-    let result = client.list_databases().catalog_name(catalog).send().await?;
+    let result = client
+        .list_databases()
+        .catalog_name(ctx.catalog())
+        .send()
+        .await?;
     
-
     Ok(())
 } 

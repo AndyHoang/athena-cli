@@ -8,36 +8,23 @@ use aws_sdk_athena::types::{
 use polars::prelude::*;
 use std::{thread, time::Duration};
 use byte_unit::Byte;
-use crate::config;
+use crate::context::Context;
 
-pub async fn execute(
-    client: aws_sdk_athena::Client, 
-    args: cli::QueryArgs,
-    database: Option<String>,
-    workgroup: Option<String>
-) -> Result<()> {
+pub async fn execute(ctx: &Context, args: &cli::QueryArgs) -> Result<()> {
     println!("Executing query: {}", args.query);
     
-    let config = config::Config::load()?;
-    
-    let database = database
-        .or_else(|| config.aws.database.clone())
+    let database = ctx.database()
         .ok_or_else(|| anyhow::anyhow!("Database name is required but was not provided"))?;
 
-    let workgroup = workgroup
-        .or_else(|| config.aws.workgroup.clone())
-        .ok_or_else(|| anyhow::anyhow!("Workgroup is required but was not provided"))?;
-
-    let output_location = args.output_location
-        .unwrap_or_else(|| config.aws.output_location.clone());
+    let client = ctx.create_athena_client();
     
     let query_id = start_query(
         &client,
         &database,
         &args.query,
-        &workgroup,
+        &ctx.workgroup(),
         args.reuse_time,
-        &output_location,
+        args.output_location.as_deref().unwrap_or("s3://aws-athena-query-results-"),
     ).await?;
     
     println!("Query execution ID: {}", query_id);

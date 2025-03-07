@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand, Args};
 use std::time::Duration;
 use humantime::parse_duration;
+use crate::config;
 
 // Shared AWS arguments used by multiple commands
 #[derive(Args, Clone, Default)]
@@ -18,8 +19,28 @@ pub struct AwsArgs {
     pub database: Option<String>,
     
     /// Catalog name
-    #[arg(long, global = true, default_value = "AwsDataCatalog")]
+    #[arg(long, global = true)]
     pub catalog: Option<String>,
+
+    /// AWS Region
+    #[arg(long, global = true)]
+    pub region: Option<String>,
+}
+
+// Global display settings
+#[derive(Args, Clone, Default)]
+pub struct DisplayArgs {
+    /// Suppress detailed output
+    #[arg(short, long, global = true)]
+    pub quiet: bool,
+}
+
+// Shared arguments for commands that support file output
+#[derive(Args, Clone)]
+pub struct OutputArgs {
+    /// Output directory for results
+    #[arg(short, long)]
+    pub output: Option<String>,
 }
 
 #[derive(Parser)]
@@ -30,6 +51,9 @@ pub struct Cli {
     
     #[command(flatten)]
     pub aws: AwsArgs,
+
+    #[command(flatten)]
+    pub display: DisplayArgs,
 }
 
 #[derive(Subcommand)]
@@ -48,10 +72,17 @@ pub enum Commands {
 
     /// Inspect details of a specific query
     Inspect(InspectArgs),
+
+    /// Download query results (shortcut for 'inspect -o')
+    #[command(alias = "dl")]  // Optional: add even shorter alias
+    Download(DownloadArgs),
 }
 
 #[derive(Args, Clone)]
 pub struct QueryArgs {
+    #[command(flatten)]
+    pub aws: AwsArgs,
+
     /// SQL query to execute
     pub query: String,
     
@@ -87,12 +118,35 @@ pub struct HistoryArgs {
     pub status: Option<String>,
 }
 
+// For commands that support output
 #[derive(Args, Clone)]
 pub struct InspectArgs {
     /// Query execution ID to inspect
     pub query_id: String,
     
-    /// Output directory for query results (e.g., "." for current directory)
-    #[arg(short, long)]
-    pub output: Option<String>,
+    #[command(flatten)]
+    pub output: OutputArgs,
+}
+
+#[derive(Args, Clone)]
+pub struct DownloadArgs {
+    /// Query execution ID
+    pub query_id: String,
+    
+    #[command(flatten)]
+    pub output: OutputArgs,
+}
+
+fn default_workgroup() -> String {
+    config::Config::load()
+        .ok()
+        .and_then(|c| c.aws.workgroup)
+        .unwrap_or_else(|| "primary".to_string())
+}
+
+fn default_region() -> String {
+    config::Config::load()
+        .ok()
+        .and_then(|c| c.aws.region)
+        .unwrap_or_else(|| "eu-west-1".to_string())
 } 

@@ -10,7 +10,7 @@ pub async fn download_from_s3(
     s3_client: &Client,
     s3_url: &str,
     output_dir: &str,
-    query_id: &str,
+    _query_id: &str,
 ) -> Result<PathBuf> {
     println!("Downloading query results from S3: {}", s3_url);
     

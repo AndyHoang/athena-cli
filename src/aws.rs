@@ -10,7 +10,7 @@ pub async fn build_aws_config(
     profile: Option<String>,
     region: String,
 ) -> Result<aws_config::SdkConfig> {
-    let mut builder = aws_config::from_env();
+    let mut builder = aws_config::defaults(aws_config::BehaviorVersion::latest());
     
     if let Some(profile_name) = profile {
         builder = builder.profile_name(profile_name);

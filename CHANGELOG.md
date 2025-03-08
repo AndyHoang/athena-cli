@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated build and CI workflows
 - Improved GitHub Actions release process
 - Fixed dependency audit issues
+- Added automated crates.io publishing to release workflow
 
 ## [0.2.0] - 2025-03-08
 ### Added

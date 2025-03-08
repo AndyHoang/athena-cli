@@ -8,7 +8,12 @@ cargo test                   # Run all tests
 cargo test -- test_name      # Run a specific test
 cargo clippy                 # Run linter
 cargo fmt                    # Format code
+cargo publish                # Publish to crates.io
 ```
+
+## GitHub Actions Configuration
+- A GitHub secret named `CARGO_REGISTRY_TOKEN` is required for automated publishing to crates.io
+- This can be generated at https://crates.io/me/settings/tokens and added to the repository secrets
 
 ## Code Style Guidelines
 - **Imports**: Group by stdlib, external crates, internal modules

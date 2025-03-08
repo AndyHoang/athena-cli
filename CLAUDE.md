@@ -32,6 +32,7 @@ cargo fmt                    # Format code
 - Use simple, descriptive commit messages
 - Do not include "Generated with Claude Code" or co-author tags
 - Format: "<action> <component>: <brief description>"
+- Always ask which branch to commit and push to before making changes
 - Examples:
   - "Update version to 0.2.0"
   - "Fix query parsing issue"

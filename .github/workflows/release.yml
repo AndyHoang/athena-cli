@@ -1,0 +1,136 @@
+name: release
+
+# Only do the release on x.y.z tags.
+on:
+  push:
+    tags:
+    - "[0-9]+.[0-9]+.[0-9]+"
+
+# We need this to be able to create releases.
+permissions:
+  contents: write
+
+jobs:
+  # The create-release job runs purely to initialize the GitHub release itself,
+  # and names the release after the `x.y.z` tag that was pushed.
+  create-release:
+    name: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get the release version from the tag
+        if: env.VERSION == ''
+        run: echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+      - name: Show the version
+        run: |
+          echo "version is: $VERSION"
+      - name: Check that tag version and Cargo.toml version are the same
+        shell: bash
+        run: |
+          if ! grep -q "version = \"$VERSION\"" Cargo.toml; then
+            echo "version does not match Cargo.toml" >&2
+            exit 1
+          fi
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create $VERSION --draft --verify-tag --title $VERSION
+    outputs:
+      version: ${{ env.VERSION }}
+
+  build-release:
+    name: build-release
+    needs: ['create-release']
+    runs-on: ${{ matrix.os }}
+    env:
+      # Emit backtraces on panics.
+      RUST_BACKTRACE: 1
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - build: linux
+          os: ubuntu-latest
+          rust: stable
+          target: x86_64-unknown-linux-musl
+        - build: macos
+          os: macos-latest
+          rust: stable
+          target: x86_64-apple-darwin
+        - build: windows
+          os: windows-latest
+          rust: stable
+          target: x86_64-pc-windows-msvc
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+        target: ${{ matrix.target }}
+
+    - name: Build release binary
+      shell: bash
+      run: |
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          # Install musl tools for Linux builds
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+        fi
+        
+        cargo build --verbose --release --target ${{ matrix.target }}
+        
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          bin="target/${{ matrix.target }}/release/athena-cli.exe"
+        else
+          bin="target/${{ matrix.target }}/release/athena-cli"
+        fi
+        echo "BIN=$bin" >> $GITHUB_ENV
+
+    - name: Strip release binary (non-Windows)
+      if: matrix.os != 'windows-latest'
+      shell: bash
+      run: strip "$BIN"
+
+    - name: Determine archive name
+      shell: bash
+      run: |
+        version="${{ needs.create-release.outputs.version }}"
+        echo "ARCHIVE=athena-cli-$version-${{ matrix.target }}" >> $GITHUB_ENV
+
+    - name: Creating directory for archive
+      shell: bash
+      run: |
+        mkdir -p "$ARCHIVE"
+        cp "$BIN" "$ARCHIVE"/
+        cp {README.md,LICENSE} "$ARCHIVE"/
+        cp CHANGELOG.md "$ARCHIVE"/ || true
+
+    - name: Build archive (Windows)
+      shell: bash
+      if: matrix.os == 'windows-latest'
+      run: |
+        7z a "$ARCHIVE.zip" "$ARCHIVE"
+        certutil -hashfile "$ARCHIVE.zip" SHA256 > "$ARCHIVE.zip.sha256"
+        echo "ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
+        echo "ASSET_SUM=$ARCHIVE.zip.sha256" >> $GITHUB_ENV
+
+    - name: Build archive (Unix)
+      shell: bash
+      if: matrix.os != 'windows-latest'
+      run: |
+        tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+        shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
+        echo "ASSET=$ARCHIVE.tar.gz" >> $GITHUB_ENV
+        echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" >> $GITHUB_ENV
+
+    - name: Upload release archive
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: |
+        version="${{ needs.create-release.outputs.version }}"
+        gh release upload "$version" ${{ env.ASSET }} ${{ env.ASSET_SUM }}

@@ -1,4 +1,10 @@
 # AWS Athena CLI
+[![Build status](https://github.com/Andyhoang/athena-cli/workflows/CI/badge.svg)](https://github.com/Andyhoang/athena-cli/actions)
+[![Crates.io](https://img.shields.io/crates/v/athena-cli.svg)](https://crates.io/crates/athena-cli)
+[![Packaging status](https://repology.org/badge/tiny-repos/athena-cli.svg)](https://repology.org/project/athena-cli/badges)
+[![Crates.io](https://img.shields.io/crates/d/athena-cli.svg)](https://crates.io/crates/athena-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 
 A command-line interface tool written in Rust for interacting with AWS Athena, providing a streamlined experience similar to the Athena web console.
 

@@ -31,10 +31,30 @@ jobs:
             echo "version does not match Cargo.toml" >&2
             exit 1
           fi
+      - name: Extract changelog for version
+        id: extract_changelog
+        run: |
+          # First get the raw section for this version
+          CHANGELOG_SECTION=$(awk -v ver="## \\[$VERSION\\]" 'BEGIN{flag=0; buf=""} $0~ver{flag=1} flag==1&&$0~"^## \\["{if(NR>1)flag=0} flag==1{buf=buf $0 "\n"} END{print buf}' CHANGELOG.md)
+          
+          # Format the release notes with proper markdown
+          # Remove the version header from notes (it's already in the title)
+          FORMATTED_NOTES=$(echo "$CHANGELOG_SECTION" | sed -n '1s/^## \[.*\].*$//p; 2,$p' | sed '/^$/d')
+          
+          # Add a header for release notes
+          RELEASE_NOTES="# What's Changed\n\n$FORMATTED_NOTES"
+          
+          # Store in env variable with proper multiline handling
+          echo "changelog<<EOF" >> $GITHUB_ENV
+          echo -e "$RELEASE_NOTES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
       - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create $VERSION --draft --verify-tag --title $VERSION
+        run: |
+          # Create release with formatted notes
+          gh release create $VERSION --draft --verify-tag --title "Release $VERSION" --notes "${{ env.changelog }}"
     outputs:
       version: ${{ env.VERSION }}
 

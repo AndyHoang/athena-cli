@@ -123,8 +123,13 @@ pub struct InspectArgs {
     /// Query execution ID to inspect
     pub query_id: String,
     
-    #[command(flatten)]
-    pub output: OutputArgs,
+    /// Output directory for query results (e.g., "." for current directory)
+    #[arg(short, long)]
+    pub output: Option<String>,
+    
+    /// Quiet mode - only output the downloaded file path
+    #[arg(short, long)]
+    pub quiet: bool,
 }
 
 #[derive(Args, Clone)]
@@ -132,8 +137,9 @@ pub struct DownloadArgs {
     /// Query execution ID
     pub query_id: String,
     
-    #[command(flatten)]
-    pub output: OutputArgs,
+    /// Output directory for results
+    #[arg(short, long)]
+    pub output: Option<String>,
 }
 
  

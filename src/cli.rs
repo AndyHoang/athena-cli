@@ -24,6 +24,10 @@ pub struct AwsArgs {
     /// AWS Region
     #[arg(long, global = true)]
     pub region: Option<String>,
+
+    /// S3 output location (for query results)
+    #[arg(long, global = true)]
+    pub output_location: Option<String>,
 }
 
 // Global display settings
@@ -89,9 +93,6 @@ pub struct QueryArgs {
     #[arg(short = 'r', long, value_parser = parse_duration, default_value = "60m")]
     pub reuse_time: Duration,
 
-    /// S3 output location (overrides config)
-    #[arg(long)]
-    pub output_location: Option<String>,
 }
 
 #[derive(Args, Clone)]

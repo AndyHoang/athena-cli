@@ -76,6 +76,14 @@ impl Context {
             .unwrap_or_else(|| "AwsDataCatalog".to_string())
     }
 
+    pub fn output_location(&self) -> Option<String> {
+        self.aws_args
+            .output_location
+            .clone()
+            .or_else(|| env::var("AWS_ATHENA_OUTPUT_LOCATION").ok())
+            .or(Some(self.config.aws.output_location.clone()))
+    }
+
     pub fn aws_config(&self) -> &aws_config::SdkConfig {
         &self.aws_config
     }

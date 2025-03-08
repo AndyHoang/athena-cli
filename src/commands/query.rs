@@ -25,9 +25,7 @@ pub async fn execute(ctx: &Context, args: &cli::QueryArgs) -> Result<()> {
         &args.query,
         &ctx.workgroup(),
         args.reuse_time,
-        args.output_location
-            .as_deref()
-            .unwrap_or("s3://aws-athena-query-results-"),
+        ctx.output_location().as_deref().unwrap_or("s3://aws-athena-query-results"),
     )
     .await?;
 

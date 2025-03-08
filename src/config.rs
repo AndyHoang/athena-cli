@@ -37,7 +37,6 @@ impl Default for HistorySortBy {
 pub struct AppConfig {
     #[serde(with = "humantime_serde")]
     pub query_reuse_time: Duration,
-    pub download_dir: PathBuf,
     pub max_rows: usize,
     /// Default number of history items to show
     #[serde(default = "default_history_size")]
@@ -67,7 +66,6 @@ impl Default for Config {
             },
             app: AppConfig {
                 query_reuse_time: Duration::from_secs(3600), // 1 hour
-                download_dir: dirs::download_dir().unwrap_or_else(|| PathBuf::from(".")),
                 max_rows: 1000,
                 history_size: 20,
                 history_fields: None,
@@ -81,18 +79,25 @@ impl Config {
     pub fn load() -> Result<Self> {
         let config_path = get_config_path()?;
         
+        println!("Looking for config at: {}", config_path.display());
+        
         if !config_path.exists() {
+            println!("Config file not found, creating default");
             let config = Config::default();
             std::fs::create_dir_all(config_path.parent().unwrap())?;
             std::fs::write(&config_path, toml::to_string_pretty(&config)?)?;
             return Ok(config);
         }
 
+        println!("Loading config from: {}", config_path.display());
         let config = config::Config::builder()
             .add_source(config::File::from(config_path))
             .build()?;
 
-        Ok(config.try_deserialize()?)
+        let config: Config = config.try_deserialize()?;
+        println!("Loaded workgroup: {:?}", config.aws.workgroup);
+        
+        Ok(config)
     }
 }
 

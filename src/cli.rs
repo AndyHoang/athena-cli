@@ -138,7 +138,7 @@ pub struct DownloadArgs {
     pub query_id: String,
     
     /// Output directory for results
-    #[arg(short, long)]
+    #[arg(short, long, default_value = ".")]
     pub output: Option<String>,
 }
 

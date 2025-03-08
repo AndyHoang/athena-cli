@@ -39,19 +39,22 @@ impl Context {
     }
 
     pub fn profile(&self) -> Option<String> {
-        self.aws_args.profile.clone()
+        let profile = self.aws_args.profile.clone()
             .or_else(|| env::var("AWS_PROFILE").ok())
             .or_else(|| env::var("AWS_DEFAULT_PROFILE").ok())
-            .or_else(|| self.config.aws.profile.clone())
+            .or_else(|| self.config.aws.profile.clone());
+        
+        profile
     }
 
     pub fn region(&self) -> String {
-        self.aws_args.region.as_ref()
+        let region = self.aws_args.region.as_ref()
             .cloned()
             .or_else(|| env::var("AWS_REGION").ok())
-            .or_else(|| env::var("AWS_DEFAULT_REGION").ok())
             .or_else(|| self.config.aws.region.clone())
-            .unwrap_or_else(|| "eu-west-1".to_string())
+            .unwrap_or_else(|| "eu-west-1".to_string());
+        
+        region
     }
 
     pub fn database(&self) -> Option<String> {

@@ -35,6 +35,7 @@ cargo fmt                    # Format code
 - Always ask which branch to commit and push to before making changes
 - Always ask for confirmation before pushing to origin
 - Use tags without the "v" prefix (e.g., "0.2.1" instead of "v0.2.1")
+- Before pushing a version tag, ensure CHANGELOG.md is updated with the latest changes
 - Examples:
   - "Update version to 0.2.0"
   - "Fix query parsing issue"

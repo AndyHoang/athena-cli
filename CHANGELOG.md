@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2025-03-08
+### Changed
+- Updated build and CI workflows
+- Improved GitHub Actions release process
+- Fixed dependency audit issues
+
 ## [0.2.0] - 2025-03-08
 ### Added
 - Query inspection command to show detailed information about query executions

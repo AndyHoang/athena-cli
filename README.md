@@ -56,13 +56,13 @@ For detailed documentation and examples, see the [Wiki](link-to-wiki).
 - [x] Configuration management with TOML config file
 - [x] Query result caching and reuse
 - [x] Polars integration for DataFrame handling
-- [x] Query history tracking
 - [x] Get detail a history query
-- [x] Export results to various formats
 
 ### Coming Soon 🚀
 - [ ] Database schema exploration
 - [ ] Custom output formatting
+- [ ] Export results to various formats
+- [ ] Query history tracking
 
 ## Contributing
 

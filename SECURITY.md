@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please do NOT open an issue. 
+If you discover a security vulnerability, please do NOT open an issue.
 Email security@your-domain.com instead.
 
 ## Security Best Practices
@@ -26,4 +26,4 @@ Email security@your-domain.com instead.
 3. Development
    - Run pre-commit hooks
    - Review code for credential leaks
-   - Keep dependencies updated 
+   - Keep dependencies updated

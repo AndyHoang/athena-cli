@@ -29,4 +29,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Workgroup listing
 - Configuration file support
 - Query result caching
-- Human-readable data size formatting 
+- Human-readable data size formatting

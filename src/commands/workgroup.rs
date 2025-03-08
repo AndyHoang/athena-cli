@@ -1,12 +1,12 @@
-use anyhow::Result;
 use crate::cli::WorkgroupArgs;
 use crate::context::Context;
+use anyhow::Result;
 
 pub async fn list(ctx: &Context, args: &WorkgroupArgs) -> Result<()> {
     let client = ctx.create_athena_client();
-    
+
     println!("Listing workgroups (limit: {})", args.limit);
-    
+
     let result = client
         .list_work_groups()
         .max_results(args.limit)
@@ -21,4 +21,4 @@ pub async fn list(ctx: &Context, args: &WorkgroupArgs) -> Result<()> {
     }
 
     Ok(())
-} 
+}

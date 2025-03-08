@@ -20,7 +20,7 @@ cargo publish                # Publish to crates.io
 - **Error Handling**: Use `anyhow::Result` with context and `?` operator
 - **Types**: Prefer structs with named fields, implement `Default` where appropriate
 - **Naming**: Use `snake_case` for variables/functions, `CamelCase` for types
-- **Organization**: 
+- **Organization**:
   - Commands in `commands/` module
   - Each command function takes client and args, returns `Result<()>`
 - **Documentation**: Document public APIs and complex logic

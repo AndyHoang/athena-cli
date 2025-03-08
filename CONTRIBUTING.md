@@ -35,4 +35,4 @@
 2. Add tests if needed
 3. Update CHANGELOG.md
 4. Wait for CI checks to pass
-5. Get review approval 
+5. Get review approval

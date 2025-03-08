@@ -37,7 +37,7 @@ jobs:
         run: gh release create $VERSION --draft --verify-tag --title $VERSION
     outputs:
       version: ${{ env.VERSION }}
-      
+
   # Publish to crates.io
   publish-crate:
     name: publish-crate
@@ -45,12 +45,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          
+
       - name: Verify Cargo.toml version
         run: |
           VERSION="${{ needs.create-release.outputs.version }}"
@@ -58,7 +58,7 @@ jobs:
             echo "version does not match Cargo.toml" >&2
             exit 1
           fi
-          
+
       - name: Publish to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
@@ -107,9 +107,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y musl-tools
         fi
-        
+
         cargo build --verbose --release --target ${{ matrix.target }}
-        
+
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
           bin="target/${{ matrix.target }}/release/athena-cli.exe"
         else

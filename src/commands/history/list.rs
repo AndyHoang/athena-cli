@@ -1,9 +1,9 @@
-use anyhow::Result;
-use prettytable::{Table, Row, Cell};
-use crate::cli::HistoryArgs;
 use super::fields::{get_field_value, HistoryField};
-use std::collections::HashMap;
+use crate::cli::HistoryArgs;
 use crate::context::Context;
+use anyhow::Result;
+use prettytable::{Cell, Row, Table};
+use std::collections::HashMap;
 
 pub async fn list(ctx: &Context, args: &HistoryArgs) -> Result<()> {
     let client = ctx.create_athena_client();
@@ -25,9 +25,13 @@ pub async fn list(ctx: &Context, args: &HistoryArgs) -> Result<()> {
         println!("No queries found in workgroup: {}", workgroup);
         return Ok(());
     }
-    
-    println!("Found {} queries in workgroup: {}", query_ids.len(), workgroup);
-    
+
+    println!(
+        "Found {} queries in workgroup: {}",
+        query_ids.len(),
+        workgroup
+    );
+
     // Get details for all queries in a single batch request
     let details = client
         .batch_get_query_execution()
@@ -36,21 +40,20 @@ pub async fn list(ctx: &Context, args: &HistoryArgs) -> Result<()> {
         .await?;
 
     // Create a map of query ID to execution for quick lookup
-    let executions_map: HashMap<String, &aws_sdk_athena::types::QueryExecution> = 
-        details.query_executions()
-            .iter()
-            .filter_map(|exec| {
-                exec.query_execution_id().map(|id| (id.to_string(), exec))
-            })
-            .collect();
-    
+    let executions_map: HashMap<String, &aws_sdk_athena::types::QueryExecution> = details
+        .query_executions()
+        .iter()
+        .filter_map(|exec| exec.query_execution_id().map(|id| (id.to_string(), exec)))
+        .collect();
+
     // Only fetch row counts if the RowCount field is being displayed
     let fields = super::fields::get_history_fields();
     let mut row_counts: HashMap<String, String> = HashMap::new();
-    
+
     if fields.contains(&HistoryField::RowCount) {
         // Get only SUCCEEDED query IDs to minimize API calls
-        let succeeded_query_ids: Vec<String> = query_ids.iter()
+        let succeeded_query_ids: Vec<String> = query_ids
+            .iter()
             .filter(|&id| {
                 if let Some(execution) = executions_map.get(id) {
                     if let Some(status) = execution.status().and_then(|s| s.state()) {
@@ -61,7 +64,7 @@ pub async fn list(ctx: &Context, args: &HistoryArgs) -> Result<()> {
             })
             .map(|id| id.to_string())
             .collect();
-        
+
         // Fetch row counts for successful queries in batches to reduce API calls
         for chunk in succeeded_query_ids.chunks(10) {
             for query_id in chunk {
@@ -69,14 +72,16 @@ pub async fn list(ctx: &Context, args: &HistoryArgs) -> Result<()> {
                     .get_query_runtime_statistics()
                     .query_execution_id(query_id)
                     .send()
-                    .await {
+                    .await
+                {
                     Ok(stats) => {
-                        if let Some(rows) = stats.query_runtime_statistics().and_then(|s| s.rows()) {
+                        if let Some(rows) = stats.query_runtime_statistics().and_then(|s| s.rows())
+                        {
                             if let Some(output_rows) = rows.output_rows() {
                                 row_counts.insert(query_id.clone(), output_rows.to_string());
                             }
                         }
-                    },
+                    }
                     Err(e) => {
                         // Log the error but continue processing
                         eprintln!("Failed to get row count for query {}: {}", query_id, e);
@@ -91,9 +96,10 @@ pub async fn list(ctx: &Context, args: &HistoryArgs) -> Result<()> {
 
     // Add header row
     let header_row = Row::new(
-        fields.iter()
+        fields
+            .iter()
             .map(|field| Cell::new(&field.to_string()))
-            .collect()
+            .collect(),
     );
     table.add_row(header_row);
 
@@ -108,14 +114,17 @@ pub async fn list(ctx: &Context, args: &HistoryArgs) -> Result<()> {
                     }
                 }
             }
-            
+
             // Create a row with values for each field
             let row = Row::new(
-                fields.iter()
+                fields
+                    .iter()
                     .map(|&field| {
                         if field == HistoryField::RowCount {
                             // Use the row count from our map if available
-                            if let Some(count) = row_counts.get(execution.query_execution_id().unwrap_or_default()) {
+                            if let Some(count) =
+                                row_counts.get(execution.query_execution_id().unwrap_or_default())
+                            {
                                 Cell::new(count)
                             } else {
                                 Cell::new("-")
@@ -124,14 +133,12 @@ pub async fn list(ctx: &Context, args: &HistoryArgs) -> Result<()> {
                             Cell::new(&get_field_value(execution, field))
                         }
                     })
-                    .collect()
+                    .collect(),
             );
             table.add_row(row);
         }
     }
-    
+
     table.printstd();
     Ok(())
 }
-
- 

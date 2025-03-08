@@ -1,6 +1,6 @@
-use std::time::Duration;
-use byte_unit::Byte;
 use aws_sdk_athena::primitives::DateTime;
+use byte_unit::Byte;
+use std::time::Duration;
 
 // Trait for converting values to display strings with a default fallback
 pub trait DisplayValue {
@@ -68,7 +68,10 @@ pub trait ByteDisplay {
 impl ByteDisplay for i64 {
     fn format_bytes(&self) -> String {
         Byte::from_i64(*self)
-            .map(|b| b.get_appropriate_unit(byte_unit::UnitType::Decimal).to_string())
+            .map(|b| {
+                b.get_appropriate_unit(byte_unit::UnitType::Decimal)
+                    .to_string()
+            })
             .unwrap_or_else(|| "-".to_string())
     }
 }
@@ -105,4 +108,4 @@ impl<T: Into<i64> + Copy> OptionDurationFormat for Option<T> {
         self.map(|ms| ms.into().format_duration_ms())
             .unwrap_or_else(|| "-".to_string())
     }
-} 
+}

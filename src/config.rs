@@ -78,9 +78,9 @@ impl Default for Config {
 impl Config {
     pub fn load() -> Result<Self> {
         let config_path = get_config_path()?;
-        
+
         println!("Looking for config at: {}", config_path.display());
-        
+
         if !config_path.exists() {
             println!("Config file not found, creating default");
             let config = Config::default();
@@ -96,7 +96,7 @@ impl Config {
 
         let config: Config = config.try_deserialize()?;
         println!("Loaded workgroup: {:?}", config.aws.workgroup);
-        
+
         Ok(config)
     }
 }
@@ -110,6 +110,6 @@ fn get_config_path() -> Result<PathBuf> {
     // Fallback only if HOME is not available
     let proj_dirs = ProjectDirs::from("com", "your-org", "athena-cli")
         .ok_or_else(|| anyhow::anyhow!("Could not determine config directory"))?;
-    
+
     Ok(proj_dirs.config_dir().join("config.toml"))
-} 
+}

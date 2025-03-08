@@ -1,32 +1,36 @@
-use aws_sdk_athena::Client;
 use crate::cli;
+use crate::context::Context;
 use anyhow::Result;
 use aws_sdk_athena::types::{
-    QueryExecutionContext, ResultConfiguration, QueryExecutionState,
-    ResultReuseConfiguration, ResultReuseByAgeConfiguration
+    QueryExecutionContext, QueryExecutionState, ResultConfiguration, ResultReuseByAgeConfiguration,
+    ResultReuseConfiguration,
 };
+use aws_sdk_athena::Client;
+use byte_unit::Byte;
 use polars::prelude::*;
 use std::{thread, time::Duration};
-use byte_unit::Byte;
-use crate::context::Context;
 
 pub async fn execute(ctx: &Context, args: &cli::QueryArgs) -> Result<()> {
     println!("Executing query: {}", args.query);
-    
-    let database = ctx.database()
+
+    let database = ctx
+        .database()
         .ok_or_else(|| anyhow::anyhow!("Database name is required but was not provided"))?;
 
     let client = ctx.create_athena_client();
-    
+
     let query_id = start_query(
         &client,
         &database,
         &args.query,
         &ctx.workgroup(),
         args.reuse_time,
-        args.output_location.as_deref().unwrap_or("s3://aws-athena-query-results-"),
-    ).await?;
-    
+        args.output_location
+            .as_deref()
+            .unwrap_or("s3://aws-athena-query-results-"),
+    )
+    .await?;
+
     println!("Query execution ID: {}", query_id);
 
     let df = get_query_results(&client, &query_id).await?;
@@ -44,9 +48,7 @@ async fn start_query(
     reuse_duration: Duration,
     output_location: &str,
 ) -> Result<String> {
-    let context = QueryExecutionContext::builder()
-        .database(database)
-        .build();
+    let context = QueryExecutionContext::builder().database(database).build();
 
     let config = ResultConfiguration::builder()
         .output_location(output_location)
@@ -60,9 +62,9 @@ async fn start_query(
                     ResultReuseByAgeConfiguration::builder()
                         .enabled(true)
                         .max_age_in_minutes(reuse_duration.as_secs() as i32 / 60)
-                        .build()
+                        .build(),
                 )
-                .build()
+                .build(),
         )
         .query_string(query)
         .query_execution_context(context)
@@ -74,10 +76,7 @@ async fn start_query(
     Ok(result.query_execution_id().unwrap_or_default().to_string())
 }
 
-async fn get_query_results(
-    client: &Client,
-    query_execution_id: &str,
-) -> Result<DataFrame> {
+async fn get_query_results(client: &Client, query_execution_id: &str) -> Result<DataFrame> {
     // Wait for query to complete
     loop {
         let status = client
@@ -95,21 +94,27 @@ async fn get_query_results(
                             println!("Results S3 path: {}", output_location);
                         }
                     }
-                    
+
                     if let Some(statistics) = execution.statistics() {
                         let data_scanned = statistics.data_scanned_in_bytes().unwrap_or(0);
                         let is_cached = data_scanned == 0;
-                        println!("Query cache status: {}", if is_cached {
-                            String::from("Results retrieved from cache")
-                        } else {
-                            let formatted_size = Byte::from_i64(data_scanned)
-                                .map(|b| b.get_appropriate_unit(byte_unit::UnitType::Decimal).to_string())
-                                .unwrap_or_else(|| "-".to_string());
-                            format!("Fresh query execution (scanned {})", formatted_size)
-                        });
+                        println!(
+                            "Query cache status: {}",
+                            if is_cached {
+                                String::from("Results retrieved from cache")
+                            } else {
+                                let formatted_size = Byte::from_i64(data_scanned)
+                                    .map(|b| {
+                                        b.get_appropriate_unit(byte_unit::UnitType::Decimal)
+                                            .to_string()
+                                    })
+                                    .unwrap_or_else(|| "-".to_string());
+                                format!("Fresh query execution (scanned {})", formatted_size)
+                            }
+                        );
                     }
                     break;
-                },
+                }
                 Some(QueryExecutionState::Failed) | Some(QueryExecutionState::Cancelled) => {
                     return Err(anyhow::anyhow!("Query failed or was cancelled"));
                 }
@@ -136,7 +141,8 @@ async fn get_query_results(
     // Initialize column names from first result
     if let Some(rs) = results.result_set() {
         if let Some(first_row) = rs.rows().first() {
-            column_names = first_row.data()
+            column_names = first_row
+                .data()
                 .iter()
                 .map(|d| d.var_char_value().unwrap_or_default().to_string())
                 .collect();
@@ -150,9 +156,9 @@ async fn get_query_results(
         if let Some(rs) = results.result_set() {
             let start_idx = if next_token.is_none() { 1 } else { 0 };
             let rows_count = rs.rows().len() - start_idx;
-            
+
             println!("Processing page {}: {} rows", page_count, rows_count);
-            
+
             for row in rs.rows().iter().skip(start_idx) {
                 for (i, data) in row.data().iter().enumerate() {
                     all_columns[i].push(data.var_char_value().unwrap_or_default().to_string());
@@ -161,9 +167,13 @@ async fn get_query_results(
         }
 
         next_token = results.next_token().map(|s| s.to_string());
-        
+
         if next_token.is_none() {
-            println!("Finished processing {} pages, total rows: {}", page_count, all_columns[0].len());
+            println!(
+                "Finished processing {} pages, total rows: {}",
+                page_count,
+                all_columns[0].len()
+            );
             break;
         }
 
@@ -178,11 +188,14 @@ async fn get_query_results(
     }
 
     // Create DataFrame
-    let series: Vec<Series> = all_columns.iter()
+    let series: Vec<Series> = all_columns
+        .iter()
         .zip(column_names.iter())
         .map(|(col, name)| Series::new(name.into(), col))
         .collect();
 
     // Convert Series to Columns and create DataFrame
-    Ok(DataFrame::new(series.into_iter().map(|s| s.into_column()).collect())?)
-} 
+    Ok(DataFrame::new(
+        series.into_iter().map(|s| s.into_column()).collect(),
+    )?)
+}

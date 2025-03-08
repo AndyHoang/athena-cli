@@ -1,8 +1,8 @@
+use crate::commands::common::{OptionByteDisplay, OptionDisplayValue, OptionDurationFormat};
+use crate::config;
+use aws_sdk_athena::types::QueryExecution;
 use std::fmt;
 use std::str::FromStr;
-use aws_sdk_athena::types::QueryExecution;
-use crate::config;
-use crate::commands::common::{OptionDisplayValue, OptionDurationFormat, OptionByteDisplay};
 
 // Define all possible fields that can be displayed in the inspect command
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -29,7 +29,7 @@ pub enum InspectField {
 // Add FromStr implementation for parsing from config
 impl FromStr for InspectField {
     type Err = String;
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "Id" => Ok(InspectField::Id),
@@ -105,16 +105,17 @@ pub fn default_inspect_fields() -> Vec<InspectField> {
 pub fn get_inspect_fields() -> Vec<InspectField> {
     if let Ok(config) = config::Config::load() {
         if let Some(field_names) = config.app.inspect_fields {
-            let fields: Vec<InspectField> = field_names.iter()
+            let fields: Vec<InspectField> = field_names
+                .iter()
                 .filter_map(|name| InspectField::from_str(name).ok())
                 .collect();
-            
+
             if !fields.is_empty() {
                 return fields;
             }
         }
     }
-    
+
     // Fall back to defaults if config loading fails or fields are empty
     default_inspect_fields()
 }
@@ -123,74 +124,88 @@ pub fn get_inspect_fields() -> Vec<InspectField> {
 pub fn get_field_value(execution: &QueryExecution, field: InspectField) -> String {
     match field {
         InspectField::Id => execution.query_execution_id().to_display_value_or_default(),
-        
-        InspectField::Status => execution.status()
+
+        InspectField::Status => execution
+            .status()
             .and_then(|s| s.state())
             .map(|s| s.as_str())
             .to_display_value_or_default(),
-        
-        InspectField::StatusReason => execution.status()
+
+        InspectField::StatusReason => execution
+            .status()
             .and_then(|s| s.state_change_reason())
             .to_display_value_or_default(),
-        
+
         InspectField::Query => execution.query().to_display_value_or_default(),
-            
-        InspectField::SubmissionTime => execution.status()
+
+        InspectField::SubmissionTime => execution
+            .status()
             .and_then(|s| s.submission_date_time())
             .to_display_value_or_default(),
-            
-        InspectField::CompletionTime => execution.status()
+
+        InspectField::CompletionTime => execution
+            .status()
             .and_then(|s| s.completion_date_time())
             .to_display_value_or_default(),
-            
-        InspectField::Database => execution.query_execution_context()
+
+        InspectField::Database => execution
+            .query_execution_context()
             .and_then(|c| c.database())
             .to_display_value_or_default(),
-            
-        InspectField::Catalog => execution.query_execution_context()
+
+        InspectField::Catalog => execution
+            .query_execution_context()
             .and_then(|c| c.catalog())
             .to_display_value_or_default(),
-            
+
         InspectField::Workgroup => execution.work_group().to_display_value_or_default(),
-            
-        InspectField::DataScanned => execution.statistics()
+
+        InspectField::DataScanned => execution
+            .statistics()
             .and_then(|s| s.data_scanned_in_bytes())
             .format_bytes_or_default(),
-            
+
         InspectField::CacheStatus => {
-            let data_scanned = execution.statistics()
+            let data_scanned = execution
+                .statistics()
                 .and_then(|s| s.data_scanned_in_bytes())
                 .unwrap_or(1);
-            
+
             if data_scanned == 0 {
                 "Used cache".to_string()
             } else {
                 "Fresh execution".to_string()
             }
-        },
-            
-        InspectField::EngineExecutionTime => execution.statistics()
+        }
+
+        InspectField::EngineExecutionTime => execution
+            .statistics()
             .and_then(|s| s.engine_execution_time_in_millis())
             .format_duration_ms_or_default(),
-            
-        InspectField::TotalExecutionTime => execution.statistics()
+
+        InspectField::TotalExecutionTime => execution
+            .statistics()
             .and_then(|s| s.total_execution_time_in_millis())
             .format_duration_ms_or_default(),
-            
-        InspectField::QueryPlanningTime => execution.statistics()
+
+        InspectField::QueryPlanningTime => execution
+            .statistics()
             .and_then(|s| s.query_planning_time_in_millis())
             .format_duration_ms_or_default(),
-            
-        InspectField::QueryQueueTime => execution.statistics()
+
+        InspectField::QueryQueueTime => execution
+            .statistics()
             .and_then(|s| s.query_queue_time_in_millis())
             .format_duration_ms_or_default(),
-            
-        InspectField::ServiceProcessingTime => execution.statistics()
+
+        InspectField::ServiceProcessingTime => execution
+            .statistics()
             .and_then(|s| s.service_processing_time_in_millis())
             .format_duration_ms_or_default(),
-            
-        InspectField::OutputLocation => execution.result_configuration()
+
+        InspectField::OutputLocation => execution
+            .result_configuration()
             .and_then(|c| c.output_location())
             .to_display_value_or_default(),
     }
-} 
+}

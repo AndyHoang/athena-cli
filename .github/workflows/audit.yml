@@ -6,11 +6,11 @@ on:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
       - '**/audit.toml'
-  
+
   # Rerun weekly to pick up new advisories (every Monday at midnight)
   schedule:
     - cron: '0 0 * * 1'
-  
+
   # Run manually
   workflow_dispatch:
 

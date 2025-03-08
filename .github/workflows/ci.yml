@@ -33,11 +33,26 @@ jobs:
         path: |
           ~/.cargo/registry
           ~/.cargo/git
+          ~/.cargo/bin
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     
-    - name: Install cargo-audit
-      run: cargo install cargo-audit --locked
+    - name: Install cargo-audit (cached or binary install)
+      run: |
+        if ! command -v cargo-audit &> /dev/null; then
+          echo "Installing cargo-audit..."
+          # Try to download pre-built binary for faster installation
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            wget -q https://github.com/rustsec/rustsec/releases/download/cargo-audit%2Fv0.17.6/cargo-audit-x86_64-unknown-linux-gnu.tar.gz
+            tar xf cargo-audit-x86_64-unknown-linux-gnu.tar.gz
+            mv cargo-audit-x86_64-unknown-linux-gnu/cargo-audit ~/.cargo/bin/
+          else
+            # Fall back to building from source
+            cargo install cargo-audit --locked
+          fi
+        else
+          echo "cargo-audit is already installed"
+        fi
     
     - name: Security audit
       run: cargo audit

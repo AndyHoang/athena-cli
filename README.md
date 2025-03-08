@@ -61,3 +61,18 @@ For detailed documentation and examples, see the [Wiki](link-to-wiki).
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+### Development Setup
+
+1. Clone the repository
+2. Install pre-commit hooks to ensure code quality:
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
+
+The pre-commit hooks will automatically:
+- Format your code with `cargo fmt`
+- Run `cargo check` to ensure compilation
+- Fix common issues with `cargo clippy --fix`
+- Check for other issues like trailing whitespace, YAML/TOML format, etc.

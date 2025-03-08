@@ -3,10 +3,18 @@
 ## Development Process
 1. Fork the repository
 2. Create a feature branch
-3. Install pre-commit hooks: `pre-commit install`
+3. Install pre-commit hooks:
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
 4. Make your changes
-5. Run tests: `cargo test`
-6. Run clippy: `cargo clippy`
+5. The pre-commit hooks will automatically:
+   - Format your code with `cargo fmt`
+   - Run `cargo check` to ensure compilation
+   - Fix common issues with `cargo clippy --fix`
+   - Check for security issues
+6. Run tests: `cargo test`
 7. Commit your changes
 8. Push to your fork
 9. Submit a Pull Request

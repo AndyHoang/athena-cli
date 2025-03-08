@@ -9,9 +9,9 @@ on:
       - '**/Cargo.lock'
       # Run if the configuration file changes
       - '**/audit.toml'
-  # Rerun periodically to pick up new advisories
+  # Rerun weekly to pick up new advisories (every Monday at midnight)
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 * * 1'
   # Run manually
   workflow_dispatch:
 

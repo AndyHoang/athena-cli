@@ -63,6 +63,7 @@ For detailed documentation and examples, see the [Wiki](link-to-wiki).
 - [ ] Custom output formatting
 - [ ] Export results to various formats
 - [ ] Query history tracking
+- [ ] Test cases
 
 ## Contributing
 

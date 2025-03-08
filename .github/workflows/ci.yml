@@ -5,6 +5,8 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  # Allow manual triggering
+  workflow_dispatch:
 
 # Restrict permissions to only what's needed
 permissions:
@@ -25,7 +27,7 @@ jobs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: stable
-        components: rustfmt, clippy
+        components: clippy
     
     - name: Cache dependencies
       uses: actions/cache@v3
@@ -33,7 +35,6 @@ jobs:
         path: |
           ~/.cargo/registry
           ~/.cargo/git
-          ~/.cargo/bin
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     

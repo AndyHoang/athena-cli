@@ -39,12 +39,12 @@ impl Context {
     }
 
     pub fn profile(&self) -> Option<String> {
-        let profile = self.aws_args.profile.clone()
+        
+        
+        self.aws_args.profile.clone()
             .or_else(|| env::var("AWS_PROFILE").ok())
             .or_else(|| env::var("AWS_DEFAULT_PROFILE").ok())
-            .or_else(|| self.config.aws.profile.clone());
-        
-        profile
+            .or_else(|| self.config.aws.profile.clone())
     }
 
     pub fn region(&self) -> String {

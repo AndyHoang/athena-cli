@@ -1,17 +1,16 @@
 name: Security Audit
 on:
+  # Run when dependencies are updated
   push:
     paths:
-      # Run if workflow changes
-      - '.github/workflows/audit.yml'
-      # Run on changed dependencies
       - '**/Cargo.toml'
       - '**/Cargo.lock'
-      # Run if the configuration file changes
       - '**/audit.toml'
+  
   # Rerun weekly to pick up new advisories (every Monday at midnight)
   schedule:
     - cron: '0 0 * * 1'
+  
   # Run manually
   workflow_dispatch:
 

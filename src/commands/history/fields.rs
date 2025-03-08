@@ -1,9 +1,8 @@
 use std::fmt;
 use std::str::FromStr;
-use std::time::Duration;
 use aws_sdk_athena::types::QueryExecution;
 use crate::config;
-use byte_unit;
+use crate::commands::common::{OptionDisplayValue, OptionDurationFormat, OptionByteDisplay};
 
 // Define all possible fields that can be displayed
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -17,6 +16,7 @@ pub enum HistoryField {
     Runtime,
     OutputLocation,
     Cache,
+    RowCount,
 }
 
 // Add FromStr implementation for parsing from config
@@ -34,6 +34,7 @@ impl FromStr for HistoryField {
             "Runtime" => Ok(HistoryField::Runtime),
             "OutputLocation" => Ok(HistoryField::OutputLocation),
             "Cache" => Ok(HistoryField::Cache),
+            "RowCount" => Ok(HistoryField::RowCount),
             _ => Err(format!("Unknown history field: {}", s)),
         }
     }
@@ -51,6 +52,7 @@ impl fmt::Display for HistoryField {
             HistoryField::Runtime => write!(f, "Runtime"),
             HistoryField::OutputLocation => write!(f, "Output Location"),
             HistoryField::Cache => write!(f, "Cache"),
+            HistoryField::RowCount => write!(f, "Row Count"),
         }
     }
 }
@@ -65,6 +67,7 @@ pub fn default_history_fields() -> Vec<HistoryField> {
         HistoryField::EndTime,
         HistoryField::DataScanned,
         HistoryField::Runtime,
+        HistoryField::RowCount,
         HistoryField::OutputLocation,
         HistoryField::Cache,
     ]
@@ -91,14 +94,14 @@ pub fn get_history_fields() -> Vec<HistoryField> {
 // Format status for display
 pub fn format_status(status: &Option<&aws_sdk_athena::types::QueryExecutionStatus>) -> String {
     status.and_then(|s| s.state())
-        .map(|s| s.as_str().to_string())
-        .unwrap_or_else(|| "UNKNOWN".to_string())
+        .map(|s| s.as_str())
+        .to_display_value_or_default()
 }
 
 // Extract a field value from a query execution
 pub fn get_field_value(execution: &QueryExecution, field: HistoryField) -> String {
     match field {
-        HistoryField::Id => execution.query_execution_id().unwrap_or("-").to_string(),
+        HistoryField::Id => execution.query_execution_id().to_display_value_or_default(),
         
         HistoryField::Status => format_status(&execution.status()),
         
@@ -108,49 +111,45 @@ pub fn get_field_value(execution: &QueryExecution, field: HistoryField) -> Strin
             } else {
                 q.to_string()
             })
-            .unwrap_or_else(|| "-".to_string()),
+            .to_display_value_or_default(),
             
         HistoryField::StartTime => execution.status()
             .and_then(|s| s.submission_date_time())
-            .map(|t| format!("{}", t))
-            .unwrap_or_else(|| "-".to_string()),
+            .to_display_value_or_default(),
             
         HistoryField::EndTime => execution.status()
             .and_then(|s| s.completion_date_time())
-            .map(|t| format!("{}", t))
-            .unwrap_or_else(|| "-".to_string()),
+            .to_display_value_or_default(),
             
         HistoryField::DataScanned => execution.statistics()
             .and_then(|s| s.data_scanned_in_bytes())
-            .map(|b| byte_unit::Byte::from_i64(b as i64)
-                .map(|b| b.get_appropriate_unit(byte_unit::UnitType::Decimal).to_string())
-                .unwrap_or_else(|| "-".to_string()))
-            .unwrap_or_else(|| "-".to_string()),
+            .format_bytes_or_default(),
             
         HistoryField::Runtime => execution.statistics()
             .and_then(|s| s.engine_execution_time_in_millis())
-            .map(|ms| {
-                let duration = Duration::from_millis(ms as u64);
-                humantime::format_duration(duration).to_string()
-            })
-            .unwrap_or_else(|| "-".to_string()),
+            .format_duration_ms_or_default(),
             
         HistoryField::OutputLocation => execution.result_configuration()
             .and_then(|c| c.output_location())
-            .unwrap_or("-")
-            .to_string(),
+            .to_display_value_or_default(),
             
         HistoryField::Cache => {
-            // Check if data scanned is 0 (indicating cache was used)
             let data_scanned = execution.statistics()
                 .and_then(|s| s.data_scanned_in_bytes())
-                .unwrap_or(1); // Default to non-zero if not available
+                .unwrap_or(1);
             
             if data_scanned == 0 {
                 "Used cache".to_string()
             } else {
                 "-".to_string()
             }
+        },
+        
+        HistoryField::RowCount => {
+            // The row count is not directly available in QueryExecution
+            // We'll need to fetch it separately using get_query_runtime_statistics
+            // For now, return a placeholder
+            "-".to_string()
         },
     }
 } 

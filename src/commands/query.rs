@@ -1,6 +1,5 @@
 use aws_sdk_athena::Client;
 use crate::cli;
-use crate::cli::QueryArgs;
 use anyhow::Result;
 use aws_sdk_athena::types::{
     QueryExecutionContext, ResultConfiguration, QueryExecutionState,
@@ -9,36 +8,23 @@ use aws_sdk_athena::types::{
 use polars::prelude::*;
 use std::{thread, time::Duration};
 use byte_unit::Byte;
-use crate::config;
+use crate::context::Context;
 
-pub async fn execute(
-    client: aws_sdk_athena::Client, 
-    args: cli::QueryArgs,
-    database: Option<String>,
-    workgroup: Option<String>
-) -> Result<()> {
+pub async fn execute(ctx: &Context, args: &cli::QueryArgs) -> Result<()> {
     println!("Executing query: {}", args.query);
     
-    let config = config::Config::load()?;
-    
-    let database = database
-        .or_else(|| config.aws.database.clone())
+    let database = ctx.database()
         .ok_or_else(|| anyhow::anyhow!("Database name is required but was not provided"))?;
 
-    let workgroup = workgroup
-        .or_else(|| config.aws.workgroup.clone())
-        .ok_or_else(|| anyhow::anyhow!("Workgroup is required but was not provided"))?;
-
-    let output_location = args.output_location
-        .unwrap_or_else(|| config.aws.output_location.clone());
+    let client = ctx.create_athena_client();
     
     let query_id = start_query(
         &client,
         &database,
         &args.query,
-        &workgroup,
+        &ctx.workgroup(),
         args.reuse_time,
-        &output_location,
+        args.output_location.as_deref().unwrap_or("s3://aws-athena-query-results-"),
     ).await?;
     
     println!("Query execution ID: {}", query_id);
@@ -116,7 +102,7 @@ async fn get_query_results(
                         println!("Query cache status: {}", if is_cached {
                             String::from("Results retrieved from cache")
                         } else {
-                            let formatted_size = Byte::from_i64(data_scanned as i64)
+                            let formatted_size = Byte::from_i64(data_scanned)
                                 .map(|b| b.get_appropriate_unit(byte_unit::UnitType::Decimal).to_string())
                                 .unwrap_or_else(|| "-".to_string());
                             format!("Fresh query execution (scanned {})", formatted_size)
@@ -149,7 +135,7 @@ async fn get_query_results(
 
     // Initialize column names from first result
     if let Some(rs) = results.result_set() {
-        if let Some(first_row) = rs.rows().get(0) {
+        if let Some(first_row) = rs.rows().first() {
             column_names = first_row.data()
                 .iter()
                 .map(|d| d.var_char_value().unwrap_or_default().to_string())

@@ -1,14 +1,21 @@
-use aws_sdk_athena::Client;
-use crate::cli::WorkgroupArgs;
 use anyhow::Result;
+use crate::cli::WorkgroupArgs;
+use crate::context::Context;
 
-pub async fn list(client: Client, args: WorkgroupArgs) -> Result<()> {
+pub async fn list(ctx: &Context, args: &WorkgroupArgs) -> Result<()> {
+    let client = ctx.create_athena_client();
+    
     println!("Listing workgroups (limit: {})", args.limit);
     
-    let result = client.list_work_groups().max_results(args.limit).send().await?;
-    
-    for wg in result.work_groups() {
-        if let Some(name) = wg.name() {
+    let result = client
+        .list_work_groups()
+        .max_results(args.limit)
+        .send()
+        .await?;
+
+    // work_groups() returns a slice reference, not an Option
+    for workgroup in result.work_groups() {
+        if let Some(name) = workgroup.name() {
             println!("- {}", name);
         }
     }

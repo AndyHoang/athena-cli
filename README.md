@@ -24,6 +24,9 @@ A command-line interface tool written in Rust for interacting with AWS Athena, p
 - `athena-cli workgroup list` - List available workgroups
 - `athena-cli db list` - List databases
 - `athena-cli history` - Show recent queries
+- `athena-cli inspect <query-id>` - Show detailed information about a query
+- `athena-cli inspect <query-id> -o <path>` - Inspect query and download results
+- `athena-cli download <query-id>` - Download query results (shortcut for inspect with download)
 
 ### Configuration
 For configuration, edit `~/.config/aws-athena-cli/config.toml` to set:
@@ -48,12 +51,11 @@ For detailed documentation and examples, see the [Wiki](link-to-wiki).
 - [x] Query result caching and reuse
 - [x] Polars integration for DataFrame handling
 - [x] Query history tracking
+- [x] Get detail a history query
+- [x] Export results to various formats
 
 ### Coming Soon 🚀
-
-- [ ] Get detail a history query
 - [ ] Database schema exploration
-- [ ] Export results to various formats (CSV, JSON, Parquet)
 - [ ] Custom output formatting
 
 ## Contributing

@@ -5,6 +5,7 @@
 [![Crates.io](https://img.shields.io/crates/d/athena-cli.svg)](https://crates.io/crates/athena-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+![Athena CLI Demo](athena-cli.gif)
 
 A command-line interface tool written in Rust for interacting with AWS Athena, providing a streamlined experience similar to the Athena web console.
 

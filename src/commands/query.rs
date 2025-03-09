@@ -186,14 +186,14 @@ async fn get_query_results(client: &Client, query_execution_id: &str) -> Result<
     }
 
     // Create DataFrame
-    let series: Vec<Series> = all_columns
+    let series = all_columns
         .iter()
         .zip(column_names.iter())
         .map(|(col, name)| Series::new(name.into(), col))
+        .map(|s| s.into_column())
         .collect();
 
+
     // Convert Series to Columns and create DataFrame
-    Ok(DataFrame::new(
-        series.into_iter().map(|s| s.into_column()).collect(),
-    )?)
+    Ok(DataFrame::new(series)?)
 }

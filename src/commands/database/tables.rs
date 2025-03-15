@@ -1,5 +1,6 @@
 use crate::cli::TableArgs;
 use crate::context::Context;
+use crate::utils::filter;
 use anyhow::{Context as _, Result};
 use prettytable::{Cell, Row, Table};
 
@@ -23,21 +24,59 @@ pub async fn list_tables(ctx: &Context, args: &TableArgs) -> Result<()> {
     // Apply limit
     request = request.max_results(args.limit);
 
-    // If filter is specified, apply it
-    if let Some(filter) = &args.filter {
-        request = request.expression(format!(r#"TableName LIKE '{}%'"#, filter));
-    }
+    // No server-side filtering - we'll filter client-side instead
 
     let result = request.send().await.context("Failed to list tables")?;
 
     let tables = result.table_metadata_list();
+
+    // Debug: Print all tables from server
+    println!("DEBUG: Received {} tables from server", tables.len());
+    if !tables.is_empty() {
+        println!("DEBUG: First few table names:");
+        for (i, table) in tables.iter().take(5).enumerate() {
+            println!("  {}. {}", i + 1, table.name());
+        }
+    }
 
     if tables.is_empty() {
         println!("No tables found in database: {}", database);
         return Ok(());
     }
 
-    // Create a pretty table instead of plain text output
+    // Apply filter if specified
+    let filtered_tables = if let Some(filter_pattern) = &args.filter {
+        println!("DEBUG: Applying filter pattern: '{}'", filter_pattern);
+
+        // Use filter_items from the utils module
+        let filtered = filter::filter_items(tables, Some(filter_pattern), |table| table.name());
+
+        println!(
+            "DEBUG: Filter reduced tables from {} to {}",
+            tables.len(),
+            filtered.len()
+        );
+        filtered
+    } else {
+        tables.iter().collect()
+    };
+
+    if filtered_tables.is_empty() {
+        println!(
+            "No tables found matching filter: {}",
+            args.filter.as_ref().unwrap()
+        );
+        return Ok(());
+    }
+
+    // Display tables
+    println!(
+        "Tables in database: {} (filtered: {})",
+        database,
+        args.filter.as_deref().unwrap_or("none")
+    );
+
+    // Create a pretty table
     let mut table = Table::new();
     table.add_row(Row::new(vec![
         Cell::new("Name").style_spec("Fb"),
@@ -45,19 +84,18 @@ pub async fn list_tables(ctx: &Context, args: &TableArgs) -> Result<()> {
         Cell::new("Columns").style_spec("Fb"),
     ]));
 
-    for table_meta in tables {
+    for table_meta in filtered_tables {
         let name = table_meta.name();
-        let table_type = table_meta.table_type().unwrap_or("Unknown");
-        let column_count = table_meta.columns().len();
+        let table_type = table_meta.table_type().unwrap_or("");
+        let column_count = table_meta.columns().len().to_string();
 
         table.add_row(Row::new(vec![
             Cell::new(name),
             Cell::new(table_type),
-            Cell::new(&column_count.to_string()),
+            Cell::new(&column_count),
         ]));
     }
 
     table.printstd();
-
     Ok(())
 }

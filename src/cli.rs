@@ -111,7 +111,7 @@ pub struct TableArgs {
     #[arg(short = 'n', long)]
     pub db: Option<String>,
 
-    /// Filter table names by pattern (e.g. "pp_" for tables starting with pp_)
+    /// Filter table names by pattern (e.g. "pp_*" for tables starting with pp_)
     #[arg(short, long)]
     pub filter: Option<String>,
 

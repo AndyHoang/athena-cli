@@ -25,7 +25,9 @@ pub async fn execute(ctx: &Context, args: &cli::QueryArgs) -> Result<()> {
         &args.query,
         &ctx.workgroup(),
         args.reuse_time,
-        ctx.output_location().as_deref().unwrap_or("s3://aws-athena-query-results"),
+        ctx.output_location()
+            .as_deref()
+            .unwrap_or("s3://aws-athena-query-results"),
     )
     .await?;
 
@@ -192,7 +194,6 @@ async fn get_query_results(client: &Client, query_execution_id: &str) -> Result<
         .map(|(col, name)| Series::new(name.into(), col))
         .map(|s| s.into_column())
         .collect();
-
 
     // Convert Series to Columns and create DataFrame
     Ok(DataFrame::new(series)?)

@@ -67,6 +67,12 @@ pub enum Commands {
     /// List available databases
     ListDatabases(DatabaseArgs),
 
+    /// List tables in a database
+    ListTables(TableArgs),
+
+    /// Describe table structure with columns and partitions
+    DescribeTable(DescribeTableArgs),
+
     /// List workgroups
     ListWorkgroups(WorkgroupArgs),
 
@@ -92,12 +98,40 @@ pub struct QueryArgs {
     /// Query reuse time (e.g., "10m", "2h", "1h30m")
     #[arg(short = 'r', long, value_parser = parse_duration, default_value = "60m")]
     pub reuse_time: Duration,
-
 }
 
 #[derive(Args, Clone)]
 pub struct DatabaseArgs {
     // Empty - will use global catalog from AwsArgs
+}
+
+#[derive(Args, Clone)]
+pub struct TableArgs {
+    /// Database name (overrides global settings)
+    #[arg(short, long)]
+    pub db: Option<String>,
+
+    /// Filter table names by pattern (e.g. "pp_" for tables starting with pp_)
+    #[arg(short, long)]
+    pub filter: Option<String>,
+
+    /// Maximum number of tables to list
+    #[arg(short, long, default_value = "100")]
+    pub limit: i32,
+}
+
+#[derive(Args, Clone)]
+pub struct DescribeTableArgs {
+    /// Table identifier (can be 'database.table' or just 'table')
+    pub table: String,
+
+    /// Database name (alternative to using 'database.table' format)
+    #[arg(short, long)]
+    pub db: Option<String>,
+
+    /// Show detailed partition information
+    #[arg(short, long)]
+    pub partitions: bool,
 }
 
 #[derive(Args, Clone)]

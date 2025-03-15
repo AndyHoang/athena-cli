@@ -1,6 +1,7 @@
 use crate::cli::TableArgs;
 use crate::context::Context;
 use anyhow::{Context as _, Result};
+use prettytable::{Cell, Row, Table};
 
 pub async fn list_tables(ctx: &Context, args: &TableArgs) -> Result<()> {
     let client = ctx.create_athena_client();
@@ -35,10 +36,28 @@ pub async fn list_tables(ctx: &Context, args: &TableArgs) -> Result<()> {
         println!("No tables found in database: {}", database);
         return Ok(());
     }
-    // Display tables
-    println!("Tables in database: {}", database);
-    println!("{:<40} {:<20} {:<15}", "Name", "Type", "Columns");
-    println!("{}", "-".repeat(75));
+
+    // Create a pretty table instead of plain text output
+    let mut table = Table::new();
+    table.add_row(Row::new(vec![
+        Cell::new("Name").style_spec("Fb"),
+        Cell::new("Type").style_spec("Fb"),
+        Cell::new("Columns").style_spec("Fb"),
+    ]));
+
+    for table_meta in tables {
+        let name = table_meta.name();
+        let table_type = table_meta.table_type().unwrap_or("Unknown");
+        let column_count = table_meta.columns().len();
+
+        table.add_row(Row::new(vec![
+            Cell::new(name),
+            Cell::new(table_type),
+            Cell::new(&column_count.to_string()),
+        ]));
+    }
+
+    table.printstd();
 
     Ok(())
 }

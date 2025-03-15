@@ -108,7 +108,7 @@ pub struct DatabaseArgs {
 #[derive(Args, Clone)]
 pub struct TableArgs {
     /// Database name (overrides global settings)
-    #[arg(short, long)]
+    #[arg(short = 'n', long)]
     pub db: Option<String>,
 
     /// Filter table names by pattern (e.g. "pp_" for tables starting with pp_)
@@ -116,7 +116,7 @@ pub struct TableArgs {
     pub filter: Option<String>,
 
     /// Maximum number of tables to list
-    #[arg(short, long, default_value = "100")]
+    #[arg(short, long, default_value = "50")]
     pub limit: i32,
 }
 

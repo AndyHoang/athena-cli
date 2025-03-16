@@ -41,12 +41,8 @@ impl ColumnDisplay {
     pub fn create_columns_table(columns: &[Column]) -> prettytable::Table {
         let mut table = prettytable::Table::new();
 
-        // Add header row
-        table.add_row(prettytable::Row::new(vec![
-            Cell::new("Name"),
-            Cell::new("Type"),
-            Cell::new("Description"),
-        ]));
+        // Add header row with styling
+        table.add_row(header_row(&["Name", "Type", "Description"]));
 
         // Add data rows
         for column in columns {
@@ -79,11 +75,8 @@ impl ParameterDisplay {
     ) -> prettytable::Table {
         let mut table = prettytable::Table::new();
 
-        // Add header row
-        table.add_row(prettytable::Row::new(vec![
-            Cell::new("Parameter"),
-            Cell::new("Value"),
-        ]));
+        // Add header row with styling
+        table.add_row(header_row(&["Parameter", "Value"]));
 
         // Add data rows
         for (key, value) in parameters {
@@ -131,11 +124,8 @@ impl DatabaseDisplay {
     ) -> prettytable::Table {
         let mut table = prettytable::Table::new();
 
-        // Add header row
-        table.add_row(prettytable::Row::new(vec![
-            Cell::new("Name"),
-            Cell::new("Description"),
-        ]));
+        // Add header row with styling using the helper function
+        table.add_row(header_row(&["Name", "Description"]));
 
         // Add data rows
         for db in databases {
@@ -197,4 +187,15 @@ impl TableMetadataDisplay {
 
         table
     }
+}
+
+/// Helper function to create a styled header cell
+pub fn header_cell(text: &str) -> Cell {
+    Cell::new(text).style_spec("Fb")
+}
+
+/// Helper function to create a styled header row
+pub fn header_row(headers: &[&str]) -> prettytable::Row {
+    let cells = headers.iter().map(|&text| header_cell(text)).collect();
+    prettytable::Row::new(cells)
 }

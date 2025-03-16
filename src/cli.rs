@@ -103,6 +103,8 @@ pub struct QueryArgs {
 #[derive(Args, Clone)]
 pub struct DatabaseArgs {
     // Empty - will use global catalog from AwsArgs
+    #[command(flatten)]
+    pub aws: AwsArgs,
 }
 
 #[derive(Args, Clone)]

@@ -1,6 +1,6 @@
+use super::utils::{ColumnDisplay, ParameterDisplay};
 use crate::cli::DescribeTableArgs;
 use crate::context::Context;
-use crate::utils::display::{ColumnDisplay, ParameterDisplay};
 use anyhow::{Context as _, Result};
 
 pub async fn describe_table(ctx: &Context, args: &DescribeTableArgs) -> Result<()> {

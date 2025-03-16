@@ -1,9 +1,18 @@
+use super::utils::DatabaseDisplay;
+use crate::cli::DatabaseArgs;
 use crate::context::Context;
-use crate::utils::display::DatabaseDisplay;
 use anyhow::Result;
 
-pub async fn list(ctx: &Context) -> Result<()> {
+pub async fn list(ctx: &Context, args: &DatabaseArgs) -> Result<()> {
     let client = ctx.create_athena_client();
+
+    // Use workgroup from args if provided
+    let workgroup = args
+        .aws
+        .workgroup
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| ctx.workgroup());
 
     let result = client
         .list_databases()
@@ -19,7 +28,11 @@ pub async fn list(ctx: &Context) -> Result<()> {
     }
 
     // Display databases in a simple list
-    println!("Databases in catalog: {}", ctx.catalog());
+    println!(
+        "Databases in catalog: {} (workgroup: {})",
+        ctx.catalog(),
+        workgroup
+    );
 
     let table = DatabaseDisplay::create_databases_table(databases);
     table.printstd();

@@ -1,6 +1,6 @@
+use super::utils::TableMetadataDisplay;
 use crate::cli::TableArgs;
 use crate::context::Context;
-use crate::utils::display::TableMetadataDisplay;
 use crate::utils::filter;
 use anyhow::{Context as _, Result};
 

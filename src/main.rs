@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     // Execute command with context
     let result = match &cli.command {
         cli::Commands::Query(args) => commands::query::execute(&ctx, args).await,
-        cli::Commands::ListDatabases(_) => commands::database::list(&ctx).await,
+        cli::Commands::ListDatabases(args) => commands::database::list(&ctx, args).await,
         cli::Commands::ListTables(args) => commands::database::list_tables(&ctx, args).await,
         cli::Commands::DescribeTable(args) => commands::database::describe_table(&ctx, args).await,
         cli::Commands::ListWorkgroups(args) => commands::workgroup::list(&ctx, args).await,

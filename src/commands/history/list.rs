@@ -2,7 +2,7 @@ use super::fields::{get_field_value, HistoryField};
 use crate::cli::HistoryArgs;
 use crate::context::Context;
 use anyhow::Result;
-use prettytable::{Cell, Row, Table};
+use prettytable::{Cell, Row};
 use std::collections::HashMap;
 
 pub async fn list(ctx: &Context, args: &HistoryArgs) -> Result<()> {
@@ -92,16 +92,15 @@ pub async fn list(ctx: &Context, args: &HistoryArgs) -> Result<()> {
     }
 
     // Process query IDs in the original order
-    let mut table = Table::new();
+    // Create a new table
+    let mut table = prettytable::Table::new();
 
-    // Add header row
-    let header_row = Row::new(
-        fields
-            .iter()
-            .map(|field| Cell::new(&field.to_string()))
-            .collect(),
-    );
-    table.add_row(header_row);
+    // Add header row with styling
+    let header_cells = fields
+        .iter()
+        .map(|field| prettytable::Cell::new(&field.to_string()).style_spec("Fb"))
+        .collect();
+    table.add_row(prettytable::Row::new(header_cells));
 
     // Add data rows in the original order from query_ids
     for query_id in query_ids {
@@ -115,27 +114,28 @@ pub async fn list(ctx: &Context, args: &HistoryArgs) -> Result<()> {
                 }
             }
 
-            // Create a row with values for each field
-            let row = Row::new(
-                fields
-                    .iter()
-                    .map(|&field| {
-                        if field == HistoryField::RowCount {
-                            // Use the row count from our map if available
-                            if let Some(count) =
-                                row_counts.get(execution.query_execution_id().unwrap_or_default())
-                            {
-                                Cell::new(count)
-                            } else {
-                                Cell::new("-")
-                            }
+            // Collect field values
+            let row_values: Vec<String> = fields
+                .iter()
+                .map(|&field| {
+                    if field == HistoryField::RowCount {
+                        // Use the row count from our map if available
+                        if let Some(count) =
+                            row_counts.get(execution.query_execution_id().unwrap_or_default())
+                        {
+                            count.clone()
                         } else {
-                            Cell::new(&get_field_value(execution, field))
+                            "-".to_string()
                         }
-                    })
-                    .collect(),
-            );
-            table.add_row(row);
+                    } else {
+                        get_field_value(execution, field)
+                    }
+                })
+                .collect();
+
+            // Create cells for the row
+            let cells: Vec<Cell> = row_values.iter().map(|val| Cell::new(val)).collect();
+            table.add_row(Row::new(cells));
         }
     }
 

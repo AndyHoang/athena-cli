@@ -1,7 +1,7 @@
 use crate::cli::DescribeTableArgs;
 use crate::context::Context;
+use crate::utils::display::{ColumnDisplay, ParameterDisplay};
 use anyhow::{Context as _, Result};
-use prettytable::{Cell, Row, Table};
 
 pub async fn describe_table(ctx: &Context, args: &DescribeTableArgs) -> Result<()> {
     let client = ctx.create_athena_client();
@@ -62,34 +62,7 @@ pub async fn describe_table(ctx: &Context, args: &DescribeTableArgs) -> Result<(
     let columns = table_metadata.columns();
     println!("\nColumns: (found {})", columns.len());
     if !columns.is_empty() {
-        let mut table = Table::new();
-        table.add_row(Row::new(vec![
-            Cell::new("Name").style_spec("Fb"),
-            Cell::new("Type").style_spec("Fb"),
-            Cell::new("Description").style_spec("Fb"),
-        ]));
-
-        // Display each column
-        for column in columns {
-            table.add_row(Row::new(vec![
-                Cell::new(
-                    &format!("{:?}", column.name())
-                        .replace("Some(\"", "")
-                        .replace("\")", ""),
-                ),
-                Cell::new(
-                    &format!("{:?}", column.r#type())
-                        .replace("Some(\"", "")
-                        .replace("\")", ""),
-                ),
-                Cell::new(
-                    &format!("{:?}", column.comment())
-                        .replace("Some(\"", "")
-                        .replace("\")", ""),
-                ),
-            ]));
-        }
-
+        let table = ColumnDisplay::create_columns_table(columns);
         table.printstd();
     } else {
         println!("No columns found in table metadata");
@@ -106,27 +79,7 @@ pub async fn describe_table(ctx: &Context, args: &DescribeTableArgs) -> Result<(
         println!("Table has {} partition keys", partitions.len());
 
         // Display partition keys in a table
-        let mut table = Table::new();
-        table.add_row(Row::new(vec![
-            Cell::new("Name").style_spec("Fb"),
-            Cell::new("Type").style_spec("Fb"),
-        ]));
-
-        for partition in partitions {
-            table.add_row(Row::new(vec![
-                Cell::new(
-                    &format!("{:?}", partition.name())
-                        .replace("Some(\"", "")
-                        .replace("\")", ""),
-                ),
-                Cell::new(
-                    &format!("{:?}", partition.r#type())
-                        .replace("Some(\"", "")
-                        .replace("\")", ""),
-                ),
-            ]));
-        }
-
+        let table = ColumnDisplay::create_columns_table(partitions);
         table.printstd();
 
         println!("\nDetailed partition information is available through SQL with:");
@@ -136,20 +89,7 @@ pub async fn describe_table(ctx: &Context, args: &DescribeTableArgs) -> Result<(
     // Display storage parameters
     if let Some(parameters) = table_metadata.parameters() {
         println!("\nStorage Parameters:");
-        let mut table = Table::new();
-        table.add_row(Row::new(vec![
-            Cell::new("Parameter").style_spec("Fb"),
-            Cell::new("Value").style_spec("Fb"),
-        ]));
-
-        for (key, value) in parameters {
-            // Skip comment as we already displayed it
-            if key == "comment" {
-                continue;
-            }
-            table.add_row(Row::new(vec![Cell::new(key), Cell::new(value)]));
-        }
-
+        let table = ParameterDisplay::create_parameters_table(parameters, &["comment"]);
         table.printstd();
     }
 

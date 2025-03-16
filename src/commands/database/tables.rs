@@ -1,8 +1,8 @@
 use crate::cli::TableArgs;
 use crate::context::Context;
+use crate::utils::display::TableMetadataDisplay;
 use crate::utils::filter;
 use anyhow::{Context as _, Result};
-use prettytable::{Cell, Row, Table};
 
 pub async fn list_tables(ctx: &Context, args: &TableArgs) -> Result<()> {
     let client = ctx.create_athena_client();
@@ -76,26 +76,9 @@ pub async fn list_tables(ctx: &Context, args: &TableArgs) -> Result<()> {
         args.filter.as_deref().unwrap_or("none")
     );
 
-    // Create a pretty table
-    let mut table = Table::new();
-    table.add_row(Row::new(vec![
-        Cell::new("Name").style_spec("Fb"),
-        Cell::new("Type").style_spec("Fb"),
-        Cell::new("Columns").style_spec("Fb"),
-    ]));
-
-    for table_meta in filtered_tables {
-        let name = table_meta.name();
-        let table_type = table_meta.table_type().unwrap_or("");
-        let column_count = table_meta.columns().len().to_string();
-
-        table.add_row(Row::new(vec![
-            Cell::new(name),
-            Cell::new(table_type),
-            Cell::new(&column_count),
-        ]));
-    }
-
+    // Create a pretty table using our display struct
+    let table = TableMetadataDisplay::create_table_metadata_table(&filtered_tables);
     table.printstd();
+
     Ok(())
 }

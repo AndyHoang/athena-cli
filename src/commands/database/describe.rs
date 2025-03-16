@@ -1,6 +1,7 @@
 use crate::cli::DescribeTableArgs;
 use crate::context::Context;
 use anyhow::{Context as _, Result};
+use prettytable::{Cell, Row, Table};
 
 pub async fn describe_table(ctx: &Context, args: &DescribeTableArgs) -> Result<()> {
     let client = ctx.create_athena_client();
@@ -59,33 +60,97 @@ pub async fn describe_table(ctx: &Context, args: &DescribeTableArgs) -> Result<(
 
     // Display columns
     let columns = table_metadata.columns();
+    println!("\nColumns: (found {})", columns.len());
     if !columns.is_empty() {
-        println!("\nColumns:");
-        println!("{:<30} {:<20} {:<40}", "Name", "Type", "Description");
-        println!("{}", "-".repeat(90));
+        let mut table = Table::new();
+        table.add_row(Row::new(vec![
+            Cell::new("Name").style_spec("Fb"),
+            Cell::new("Type").style_spec("Fb"),
+            Cell::new("Description").style_spec("Fb"),
+        ]));
+
+        // Display each column
+        for column in columns {
+            table.add_row(Row::new(vec![
+                Cell::new(
+                    &format!("{:?}", column.name())
+                        .replace("Some(\"", "")
+                        .replace("\")", ""),
+                ),
+                Cell::new(
+                    &format!("{:?}", column.r#type())
+                        .replace("Some(\"", "")
+                        .replace("\")", ""),
+                ),
+                Cell::new(
+                    &format!("{:?}", column.comment())
+                        .replace("Some(\"", "")
+                        .replace("\")", ""),
+                ),
+            ]));
+        }
+
+        table.printstd();
+    } else {
+        println!("No columns found in table metadata");
     }
 
     // Display partitions
     let partitions = table_metadata.partition_keys();
 
-    if args.partitions {
-        println!("\nPartition Details:");
-        // This would typically query partition information, but AWS Athena API doesn't have a direct method
-        // For now, we'll do a simple explanation
-        println!("Detailed partition information is available through SQL with:");
+    // Always show partition information
+    println!("\nPartition Details:");
+    if partitions.is_empty() {
+        println!("Table is not partitioned");
+    } else {
+        println!("Table has {} partition keys", partitions.len());
+
+        // Display partition keys in a table
+        let mut table = Table::new();
+        table.add_row(Row::new(vec![
+            Cell::new("Name").style_spec("Fb"),
+            Cell::new("Type").style_spec("Fb"),
+        ]));
+
+        for partition in partitions {
+            table.add_row(Row::new(vec![
+                Cell::new(
+                    &format!("{:?}", partition.name())
+                        .replace("Some(\"", "")
+                        .replace("\")", ""),
+                ),
+                Cell::new(
+                    &format!("{:?}", partition.r#type())
+                        .replace("Some(\"", "")
+                        .replace("\")", ""),
+                ),
+            ]));
+        }
+
+        table.printstd();
+
+        println!("\nDetailed partition information is available through SQL with:");
         println!("SHOW PARTITIONS {}.{}", database_name, table_name);
     }
 
     // Display storage parameters
     if let Some(parameters) = table_metadata.parameters() {
         println!("\nStorage Parameters:");
+        let mut table = Table::new();
+        table.add_row(Row::new(vec![
+            Cell::new("Parameter").style_spec("Fb"),
+            Cell::new("Value").style_spec("Fb"),
+        ]));
+
         for (key, value) in parameters {
             // Skip comment as we already displayed it
             if key == "comment" {
                 continue;
             }
-            println!("{:<30} {}", key, value);
+            table.add_row(Row::new(vec![Cell::new(key), Cell::new(value)]));
         }
+
+        table.printstd();
     }
 
     Ok(())

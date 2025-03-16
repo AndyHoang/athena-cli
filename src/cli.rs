@@ -126,12 +126,8 @@ pub struct DescribeTableArgs {
     pub table: String,
 
     /// Database name (alternative to using 'database.table' format)
-    #[arg(short, long)]
+    #[arg(short = 'n', long)]
     pub db: Option<String>,
-
-    /// Show detailed partition information
-    #[arg(short, long)]
-    pub partitions: bool,
 }
 
 #[derive(Args, Clone)]

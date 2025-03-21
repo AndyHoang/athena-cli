@@ -42,12 +42,14 @@ jobs:
           cp -r docs/* public/
           mkdir -p public/api/rustdoc
           cp -r target/doc/* public/api/rustdoc/
-          echo "theme: jekyll-theme-cayman" > public/_config.yml
+          # Ensure no CNAME file exists that would trigger custom domain
+          rm -f public/CNAME
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
         with:
           enablement: true
+          cname: '' # Explicitly set to empty to avoid inheriting custom domain
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -57,3 +59,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          skip_cname: true # Skip custom domain settings

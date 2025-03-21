@@ -1,3 +1,37 @@
+//! Query execution module for Athena CLI.
+//!
+//! This module provides functionality to:
+//! - Execute SQL queries against AWS Athena
+//! - Retrieve and display query results
+//! - Monitor query execution status and statistics
+//! - Handle result pagination and data formatting
+//!
+//! ## Usage Examples
+//!
+//! Simple query:
+//!
+//! ```bash
+//! athena-cli query "SELECT * FROM my_table"
+//! ```
+//!
+//! Query with database and workgroup specified:
+//!
+//! ```bash
+//! athena-cli -d my_database -w my_workgroup query "SELECT * FROM my_table"
+//! ```
+//!
+//! Query with custom result reuse time:
+//!
+//! ```bash
+//! athena-cli query --reuse-time 2h "SELECT * FROM my_table"
+//! ```
+//!
+//! Query with output location:
+//!
+//! ```bash
+//! athena-cli --output-location s3://my-bucket/results/ query "SELECT * FROM my_table"
+//! ```
+
 use crate::cli;
 use crate::context::Context;
 use anyhow::Result;
@@ -10,6 +44,49 @@ use byte_unit::Byte;
 use polars::prelude::*;
 use std::{thread, time::Duration};
 
+/// Executes an Athena SQL query and displays the results.
+///
+/// # Arguments
+///
+/// * `ctx` - The application context containing configuration and connection details
+/// * `args` - Command line arguments including the SQL query text and reuse time
+///
+/// # Returns
+///
+/// Returns a Result indicating success or failure of the query execution
+///
+/// # Features
+///
+/// * Configurable query result reuse (caching) duration
+/// * Displays query statistics including data scanned and cache status
+/// * Supports pagination for large result sets
+/// * Returns results as a Polars DataFrame for further processing
+///
+/// # Examples
+///
+/// Basic query example:
+///
+/// ```bash
+/// athena-cli query "SELECT * FROM my_database.my_table LIMIT 10"
+/// ```
+///
+/// Using result reuse/caching (30 minutes):
+///
+/// ```bash
+/// athena-cli query --reuse-time 30m "SELECT count(*) FROM my_table"
+/// ```
+///
+/// Query with specific database:
+///
+/// ```bash
+/// athena-cli -d my_database query "SELECT * FROM my_table WHERE id=123"
+/// ```
+///
+/// Query with custom workgroup and output location:
+///
+/// ```bash
+/// athena-cli -w my_workgroup --output-location s3://my-bucket/results/ query "SELECT * FROM my_table"
+/// ```
 pub async fn execute(ctx: &Context, args: &cli::QueryArgs) -> Result<()> {
     println!("Executing query: {}", args.query);
 
@@ -40,6 +117,26 @@ pub async fn execute(ctx: &Context, args: &cli::QueryArgs) -> Result<()> {
     Ok(())
 }
 
+/// Starts an Athena query execution with the specified parameters and returns the execution ID.
+///
+/// # Arguments
+///
+/// * `client` - The AWS Athena SDK client
+/// * `database` - The database to query against
+/// * `query` - The SQL query string to execute
+/// * `workgroup` - The Athena workgroup to use
+/// * `reuse_duration` - Duration for which query results should be reused/cached
+/// * `output_location` - S3 location where query results will be stored
+///
+/// # Returns
+///
+/// Returns a Result containing the query execution ID as a String
+///
+/// # Implementation Details
+///
+/// * Configures the query context with database and output location
+/// * Sets up result reuse configuration based on the provided duration
+/// * Returns the execution ID that can be used to track and retrieve results
 async fn start_query(
     client: &Client,
     database: &str,
@@ -76,6 +173,28 @@ async fn start_query(
     Ok(result.query_execution_id().unwrap_or_default().to_string())
 }
 
+/// Retrieves query results and converts them to a Polars DataFrame.
+///
+/// # Arguments
+///
+/// * `client` - The AWS Athena SDK client
+/// * `query_execution_id` - The execution ID of the query whose results to retrieve
+///
+/// # Returns
+///
+/// Returns a Result containing a Polars DataFrame with the query results
+///
+/// # Behavior
+///
+/// * Polls the query execution until it succeeds, fails, or is cancelled
+/// * Displays query statistics including data scanned and cache status
+/// * Paginates through results if they span multiple pages (100 rows per page)
+/// * Converts query results to a Polars DataFrame for analysis and display
+///
+/// # Error Handling
+///
+/// * Returns an error if the query fails or is cancelled
+/// * Handles partial results and pagination automatically
 async fn get_query_results(client: &Client, query_execution_id: &str) -> Result<DataFrame> {
     // Wait for query to complete
     loop {

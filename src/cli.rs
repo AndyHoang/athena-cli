@@ -119,10 +119,15 @@ pub struct QueryArgs {
     #[command(flatten)]
     pub aws: AwsArgs,
 
-    /// SQL query to execute
+    /// SQL query to execute (can be a full SQL statement)
+    ///
+    /// Example: "SELECT * FROM my_database.my_table LIMIT 10"
     pub query: String,
 
-    /// Query reuse time (e.g., "10m", "2h", "1h30m")
+    /// Query reuse time (e.g., "10m", "2h", "1h30m") - specifies how long cached results should be reused
+    ///
+    /// Athena will reuse query results for identical queries within this time period,
+    /// which can save on costs and improve performance. Set to 0 to disable result reuse.
     #[arg(short = 'r', long, value_parser = parse_duration, default_value = "60m")]
     pub reuse_time: Duration,
 }

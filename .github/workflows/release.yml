@@ -34,21 +34,40 @@ jobs:
       - name: Extract changelog for version
         id: extract_changelog
         run: |
-          # First get the raw section for this version
-          CHANGELOG_SECTION=$(awk -v ver="## \\[$VERSION\\]" 'BEGIN{flag=0; buf=""} $0~ver{flag=1} flag==1&&$0~"^## \\["{if(NR>1)flag=0} flag==1{buf=buf $0 "\n"} END{print buf}' CHANGELOG.md)
-          
-          # Format the release notes with proper markdown
-          # Remove the version header from notes (it's already in the title)
-          FORMATTED_NOTES=$(echo "$CHANGELOG_SECTION" | sed -n '1s/^## \[.*\].*$//p; 2,$p' | sed '/^$/d')
-          
-          # Add a header for release notes
-          RELEASE_NOTES="# What's Changed\n\n$FORMATTED_NOTES"
-          
+          # Create a more robust method to extract the changelog section
+          VERSION_PATTERN="## \\[$VERSION\\]"
+
+          # Find the line number where the version section starts
+          START_LINE=$(grep -n "$VERSION_PATTERN" CHANGELOG.md | cut -d ':' -f1)
+          if [ -z "$START_LINE" ]; then
+            echo "Error: Could not find version $VERSION in CHANGELOG.md"
+            exit 1
+          fi
+
+          # Find the line number of the next version section (or EOF if this is the last version)
+          NEXT_VERSION_LINE=$(tail -n +$((START_LINE + 1)) CHANGELOG.md | grep -n "^## \\[" | head -1 | cut -d ':' -f1)
+          if [ -z "$NEXT_VERSION_LINE" ]; then
+            # No next version found, extract till the end of file
+            SECTION_CONTENT=$(tail -n +$((START_LINE + 1)) CHANGELOG.md)
+          else
+            # Extract content between current version and next version
+            SECTION_CONTENT=$(tail -n +$((START_LINE + 1)) CHANGELOG.md | head -n $((NEXT_VERSION_LINE - 1)))
+          fi
+
+          # Add our header for the release notes
+          RELEASE_NOTES="# What's Changed\n\n$SECTION_CONTENT"
+
+          # Debug output
+          echo "Extracted content for version $VERSION:"
+          echo "---"
+          echo "$SECTION_CONTENT"
+          echo "---"
+
           # Store in env variable with proper multiline handling
           echo "changelog<<EOF" >> $GITHUB_ENV
           echo -e "$RELEASE_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-          
+
       - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

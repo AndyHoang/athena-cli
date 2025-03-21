@@ -1,0 +1,37 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Generate documentation
+        run: |
+          cargo doc --no-deps
+
+      - name: Setup docs directory
+        run: |
+          mkdir -p public
+          cp -r docs/* public/
+          mkdir -p public/api/rustdoc
+          cp -r target/doc/* public/api/rustdoc/
+          echo "theme: jekyll-theme-cayman" > public/_config.yml
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public

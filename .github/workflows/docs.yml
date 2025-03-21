@@ -35,6 +35,7 @@ jobs:
       - name: Generate documentation
         run: |
           cargo doc --no-deps
+
       - name: Setup docs directory
         run: |
           mkdir -p public
@@ -42,8 +43,11 @@ jobs:
           mkdir -p public/api/rustdoc
           cp -r target/doc/* public/api/rustdoc/
           echo "theme: jekyll-theme-cayman" > public/_config.yml
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
+        with:
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

@@ -64,11 +64,23 @@ pub enum Commands {
     /// Execute a query
     Query(QueryArgs),
 
-    /// List available databases
-    ListDatabases(DatabaseArgs),
+    /// Database operations
+    Database {
+        #[command(subcommand)]
+        command: DatabaseCommands,
+    },
 
-    /// List workgroups
-    ListWorkgroups(WorkgroupArgs),
+    /// Table operations
+    Table {
+        #[command(subcommand)]
+        command: TableCommands,
+    },
+
+    /// Workgroup operations
+    Workgroup {
+        #[command(subcommand)]
+        command: WorkgroupCommands,
+    },
 
     /// Show query history
     History(HistoryArgs),
@@ -79,6 +91,27 @@ pub enum Commands {
     /// Download query results (shortcut for 'inspect -o')
     #[command(alias = "dl")] // Optional: add even shorter alias
     Download(DownloadArgs),
+}
+
+#[derive(Subcommand)]
+pub enum DatabaseCommands {
+    /// List available databases
+    List(DatabaseArgs),
+}
+
+#[derive(Subcommand)]
+pub enum TableCommands {
+    /// List tables in a database
+    List(TableArgs),
+
+    /// Describe table structure with columns and partitions
+    Describe(DescribeTableArgs),
+}
+
+#[derive(Subcommand)]
+pub enum WorkgroupCommands {
+    /// List workgroups
+    List(WorkgroupArgs),
 }
 
 #[derive(Args, Clone)]
@@ -92,12 +125,38 @@ pub struct QueryArgs {
     /// Query reuse time (e.g., "10m", "2h", "1h30m")
     #[arg(short = 'r', long, value_parser = parse_duration, default_value = "60m")]
     pub reuse_time: Duration,
-
 }
 
 #[derive(Args, Clone)]
 pub struct DatabaseArgs {
     // Empty - will use global catalog from AwsArgs
+    #[command(flatten)]
+    pub aws: AwsArgs,
+}
+
+#[derive(Args, Clone)]
+pub struct TableArgs {
+    /// Database name (overrides global settings)
+    #[arg(short = 'n', long)]
+    pub db: Option<String>,
+
+    /// Filter table names by pattern (e.g. "pp_*" for tables starting with pp_)
+    #[arg(short, long)]
+    pub filter: Option<String>,
+
+    /// Maximum number of tables to list
+    #[arg(short, long, default_value = "50")]
+    pub limit: i32,
+}
+
+#[derive(Args, Clone)]
+pub struct DescribeTableArgs {
+    /// Table identifier (can be 'database.table' or just 'table')
+    pub table: String,
+
+    /// Database name (alternative to using 'database.table' format)
+    #[arg(short = 'n', long)]
+    pub db: Option<String>,
 }
 
 #[derive(Args, Clone)]

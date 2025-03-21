@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-03-21
+### Added
+- Database schema exploration functionality
+- Added `table describe` command to show detailed table structure
+- Added table column type display and partitioning information
+
+### Changed
+- Restructured CLI commands to follow `object action` convention
+- Changed `list-databases` to `database list`
+- Changed `list-tables` to `table list`
+- Changed `describe-table` to `table describe`
+- Changed `list-workgroups` to `workgroup list`
+- Updated documentation and README to reflect new command structure
+
 ## [0.2.2] - 2025-03-08
 ### Fixed
 - Fixed issue with query command where output location was incorrectly handled

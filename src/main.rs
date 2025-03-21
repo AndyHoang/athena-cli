@@ -3,6 +3,7 @@ mod cli;
 mod commands;
 mod config;
 mod context;
+mod utils;
 
 use anyhow::Result;
 use clap::Parser;
@@ -19,8 +20,18 @@ async fn main() -> Result<()> {
     // Execute command with context
     let result = match &cli.command {
         cli::Commands::Query(args) => commands::query::execute(&ctx, args).await,
-        cli::Commands::ListDatabases(_) => commands::database::list(&ctx).await,
-        cli::Commands::ListWorkgroups(args) => commands::workgroup::list(&ctx, args).await,
+        cli::Commands::Database { command } => match command {
+            cli::DatabaseCommands::List(args) => commands::database::list(&ctx, args).await,
+        },
+        cli::Commands::Table { command } => match command {
+            cli::TableCommands::List(args) => commands::database::list_tables(&ctx, args).await,
+            cli::TableCommands::Describe(args) => {
+                commands::database::describe_table(&ctx, args).await
+            }
+        },
+        cli::Commands::Workgroup { command } => match command {
+            cli::WorkgroupCommands::List(args) => commands::workgroup::list(&ctx, args).await,
+        },
         cli::Commands::History(args) => commands::history::list(&ctx, args).await,
         cli::Commands::Inspect(args) => commands::inspect::inspect(&ctx, args).await,
         cli::Commands::Download(args) => commands::inspect::download(&ctx, args).await,

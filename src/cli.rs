@@ -64,17 +64,23 @@ pub enum Commands {
     /// Execute a query
     Query(QueryArgs),
 
-    /// List available databases
-    ListDatabases(DatabaseArgs),
+    /// Database operations
+    Database {
+        #[command(subcommand)]
+        command: DatabaseCommands,
+    },
 
-    /// List tables in a database
-    ListTables(TableArgs),
+    /// Table operations
+    Table {
+        #[command(subcommand)]
+        command: TableCommands,
+    },
 
-    /// Describe table structure with columns and partitions
-    DescribeTable(DescribeTableArgs),
-
-    /// List workgroups
-    ListWorkgroups(WorkgroupArgs),
+    /// Workgroup operations
+    Workgroup {
+        #[command(subcommand)]
+        command: WorkgroupCommands,
+    },
 
     /// Show query history
     History(HistoryArgs),
@@ -85,6 +91,27 @@ pub enum Commands {
     /// Download query results (shortcut for 'inspect -o')
     #[command(alias = "dl")] // Optional: add even shorter alias
     Download(DownloadArgs),
+}
+
+#[derive(Subcommand)]
+pub enum DatabaseCommands {
+    /// List available databases
+    List(DatabaseArgs),
+}
+
+#[derive(Subcommand)]
+pub enum TableCommands {
+    /// List tables in a database
+    List(TableArgs),
+
+    /// Describe table structure with columns and partitions
+    Describe(DescribeTableArgs),
+}
+
+#[derive(Subcommand)]
+pub enum WorkgroupCommands {
+    /// List workgroups
+    List(WorkgroupArgs),
 }
 
 #[derive(Args, Clone)]

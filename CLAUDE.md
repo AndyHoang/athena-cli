@@ -39,6 +39,7 @@ cargo publish                # Publish to crates.io
 - Format: "<action> <component>: <brief description>"
 - Always ask which branch to commit and push to before making changes
 - Always ask for confirmation before pushing to origin
+- When build/check the project, use -q (quiet) so that we dont spend unwanted tokens
 - Use tags without the "v" prefix (e.g., "0.2.1" instead of "v0.2.1")
 - Before pushing a version tag, ensure CHANGELOG.md is updated with the latest changes
 - Squash commits with shallow messages (like "wip", "fix", etc.) before pushing to keep history clean

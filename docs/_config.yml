@@ -1,5 +1,5 @@
 theme: jekyll-theme-cayman
 title: Athena CLI
 description: A command-line interface for Amazon Athena
-baseurl: "/athena-cli"
-url: "https://andyhoang.github.io"
+baseurl: ""
+url: "https://athena-cli.andyhoang.me"

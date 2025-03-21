@@ -9,7 +9,7 @@
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability, please do NOT open an issue.
-Email security@your-domain.com instead.
+Email ngocdunghoangdl@gmail.com instead.
 
 ## Security Best Practices
 

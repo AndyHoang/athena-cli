@@ -4,6 +4,7 @@
 [![Packaging status](https://repology.org/badge/tiny-repos/athena-cli.svg)](https://repology.org/project/athena-cli/badges)
 [![Crates.io](https://img.shields.io/crates/d/athena-cli.svg)](https://crates.io/crates/athena-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docs](https://img.shields.io/badge/docs-website-blue.svg)](https://athena-cli.andyhoang.me/)
 
 A command-line interface tool written in Rust for interacting with AWS Athena, providing a streamlined experience similar to the Athena web console.
 
@@ -49,7 +50,7 @@ For configuration, edit `~/.config/aws-athena-cli/config.toml` to set:
 - Configured AWS credentials
 - Rust 1.70+
 
-For detailed documentation and examples, see the [Wiki](link-to-wiki).
+For detailed documentation and examples, see the [Documentation](https://athena-cli.andyhoang.me/).
 
 ## Milestones
 

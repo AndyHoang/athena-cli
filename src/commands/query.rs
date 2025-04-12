@@ -34,6 +34,7 @@
 
 use crate::cli;
 use crate::context::Context;
+use crate::validation;
 use anyhow::Result;
 use aws_sdk_athena::types::{
     QueryExecutionContext, QueryExecutionState, ResultConfiguration, ResultReuseByAgeConfiguration,
@@ -41,6 +42,7 @@ use aws_sdk_athena::types::{
 };
 use aws_sdk_athena::Client;
 use byte_unit::Byte;
+use colored::Colorize;
 use polars::prelude::*;
 use std::{thread, time::Duration};
 
@@ -89,6 +91,12 @@ use std::{thread, time::Duration};
 /// ```
 pub async fn execute(ctx: &Context, args: &cli::QueryArgs) -> Result<()> {
     println!("Executing query: {}", args.query);
+
+    // Validate SQL syntax before sending to Athena
+    if let Err(e) = validation::validate_query_syntax(&args.query) {
+        println!("{}", "SQL syntax validation failed".red().bold());
+        return Err(e);
+    }
 
     let database = ctx
         .database()
@@ -235,7 +243,16 @@ async fn get_query_results(client: &Client, query_execution_id: &str) -> Result<
                     break;
                 }
                 Some(QueryExecutionState::Failed) | Some(QueryExecutionState::Cancelled) => {
-                    return Err(anyhow::anyhow!("Query failed or was cancelled"));
+                    let error_message = if let Some(status) = execution.status() {
+                        if let Some(reason) = status.state_change_reason() {
+                            format!("Query failed: {}", reason)
+                        } else {
+                            "Query failed or was cancelled without specific reason".to_string()
+                        }
+                    } else {
+                        "Query failed or was cancelled".to_string()
+                    };
+                    return Err(anyhow::anyhow!("{}", error_message.red().bold()));
                 }
                 _ => {
                     thread::sleep(Duration::from_secs(1));

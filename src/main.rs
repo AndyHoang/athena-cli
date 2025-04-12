@@ -4,6 +4,7 @@ mod commands;
 mod config;
 mod context;
 mod utils;
+mod validation;
 
 use anyhow::Result;
 use clap::Parser;

@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- SQL syntax validation before sending queries to Athena (ansi sql dialect)
+- Improved error handling for SQL queries with syntax errors
+- User-friendly error messages with suggestions for fixing common issues
+- Colorized output for better readability of error messages
+- Support for different error types (syntax, permissions, table not found)
+
 ## [0.3.0] - 2025-03-21
 ### Added
 - Database schema exploration functionality

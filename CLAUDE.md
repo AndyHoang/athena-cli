@@ -33,6 +33,37 @@ cargo publish                # Publish to crates.io
 - `src/commands/` - Command implementations
 - `src/athena/` - AWS Athena client wrapper
 
+## Release Process
+When creating a new release, always follow these steps in order:
+
+1. Update CHANGELOG.md:
+   - Move changes from "Unreleased" section to a new version section
+   - Add the release date in format YYYY-MM-DD
+   - Ensure all significant changes are documented
+
+2. Update version in Cargo.toml:
+   - Change the version number in the `[package]` section
+   - Ensure it matches the version you're about to tag
+
+3. Commit these changes:
+   - Use a clear commit message like "Prepare release X.Y.Z"
+   - Push to the main branch
+
+4. Create and push the tag:
+   - Use tags without the "v" prefix (e.g., "0.2.1" instead of "v0.2.1")
+   - Ensure the tag is created AFTER committing version changes
+   - Push the tag to origin to trigger the release workflow
+
+5. Example commands:
+   ```bash
+   # Update CHANGELOG.md and Cargo.toml first, then:
+   git add CHANGELOG.md Cargo.toml
+   git commit -m "Prepare release 0.3.2"
+   git push origin main
+   git tag 0.3.2
+   git push origin 0.3.2
+   ```
+
 ## Commit Guidelines
 - Use simple, descriptive commit messages
 - Do not include "Generated with Claude Code" or co-author tags
@@ -40,8 +71,6 @@ cargo publish                # Publish to crates.io
 - Always ask which branch to commit and push to before making changes
 - Always ask for confirmation before pushing to origin
 - When build/check the project, use -q (quiet) so that we dont spend unwanted tokens
-- Use tags without the "v" prefix (e.g., "0.2.1" instead of "v0.2.1")
-- Before pushing a version tag, ensure CHANGELOG.md is updated with the latest changes
 - Squash commits with shallow messages (like "wip", "fix", etc.) before pushing to keep history clean
 - Examples:
   - "Update version to 0.2.0"

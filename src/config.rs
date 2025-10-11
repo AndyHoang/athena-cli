@@ -19,20 +19,6 @@ pub struct AwsConfig {
     pub profile: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-pub enum HistorySortBy {
-    StartTime,
-    EndTime,
-    DataScanned,
-    Status,
-}
-
-impl Default for HistorySortBy {
-    fn default() -> Self {
-        Self::StartTime
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
     #[serde(with = "humantime_serde")]

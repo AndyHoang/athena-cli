@@ -6,10 +6,6 @@ use anyhow::Result;
 use aws_sdk_s3;
 use owo_colors::OwoColorize;
 use prettytable::{format, Cell, Row, Table};
-use std::fs;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use tempfile::tempdir;
 
 pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
     let client = ctx.create_athena_client();
@@ -18,56 +14,47 @@ pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
     // Command-specific quiet overrides global setting
     let quiet_mode = args.quiet || ctx.quiet();
 
-    // Get query execution details
-    let result = client
+    // Call both APIs in parallel for better performance
+    let execution_future = client
         .get_query_execution()
         .query_execution_id(&query_id)
-        .send()
-        .await?;
+        .send();
 
-    let execution = result
+    let runtime_stats_future = client
+        .get_query_runtime_statistics()
+        .query_execution_id(&query_id)
+        .send();
+
+    let (execution_result, runtime_stats_result) =
+        tokio::join!(execution_future, runtime_stats_future);
+
+    // Process execution result - store the output to extend lifetime
+    let execution_output = execution_result?;
+    let execution = execution_output
         .query_execution()
         .ok_or_else(|| anyhow::anyhow!("No query execution found with ID: {}", query_id))?;
 
-    let mut total_rows: Option<usize> = None;
-    let mut temp_dir = None; // To hold the TempDir if created
-
-    // If query succeeded, calculate total rows
-    if let Some(status) = execution.status() {
+    // Extract total rows from runtime statistics if query succeeded
+    let total_rows: Option<i64> = if let Some(status) = execution.status() {
         if let Some(state) = status.state() {
             if state.as_str() == "SUCCEEDED" {
-                if let Some(s3_output_location) = execution
-                    .result_configuration()
-                    .and_then(|c| c.output_location())
-                {
-                    let output_dir = match &args.output {
-                        Some(dir) => dir.clone(),
-                        None => {
-                            let dir = tempdir()?;
-                            let path = dir.path().to_str().unwrap().to_string();
-                            temp_dir = Some(dir); // Keep TempDir in scope
-                            path
-                        }
-                    };
-
-                    let s3_client = aws_sdk_s3::Client::new(ctx.aws_config());
-                    if let Ok(file_path) =
-                        download_from_s3(&s3_client, s3_output_location, &output_dir, &query_id)
-                            .await
-                    {
-                        if let Ok(file) = File::open(&file_path) {
-                            let reader = BufReader::new(file);
-                            // Subtract 1 for the header row
-                            total_rows = Some(reader.lines().count().saturating_sub(1));
-                        }
-                        if args.output.is_none() {
-                            let _ = fs::remove_file(file_path);
-                        }
-                    }
+                if let Ok(runtime_stats_output) = runtime_stats_result {
+                    runtime_stats_output
+                        .query_runtime_statistics()
+                        .and_then(|stats| stats.rows())
+                        .and_then(|rows| rows.output_rows())
+                } else {
+                    None
                 }
+            } else {
+                None
             }
+        } else {
+            None
         }
-    }
+    } else {
+        None
+    };
 
     if !quiet_mode {
         println!("\n{}", "Query Execution Details".bold());
@@ -216,7 +203,5 @@ pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
     if !quiet_mode {
         println!(); // Add final newline
     }
-    // temp_dir will be dropped here, and the temporary directory will be cleaned up.
-    let _ = temp_dir;
     Ok(())
 }

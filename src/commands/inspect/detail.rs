@@ -126,47 +126,40 @@ pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
             if state.as_str() == "SUCCEEDED" {
                 if !quiet_mode {
                     // Display sample results if we fetched them
-                    if let Some(results_opt) = results_result {
-                        if let Ok(results) = results_opt {
-                            if let Some(result_set) = results.result_set {
-                                if let Some(ref rows) = result_set.rows {
-                                    if !rows.is_empty() {
-                                        println!(
-                                            "\n{}",
-                                            "Query Result Sample (first 10 rows):".bold()
-                                        );
-                                        let mut sample_table = Table::new();
-                                        sample_table.set_format(*format::consts::FORMAT_BOX_CHARS);
+                    if let Some(Ok(results)) = results_result {
+                        if let Some(result_set) = results.result_set {
+                            if let Some(ref rows) = result_set.rows {
+                                if !rows.is_empty() {
+                                    println!("\n{}", "Query Result Sample (first 10 rows):".bold());
+                                    let mut sample_table = Table::new();
+                                    sample_table.set_format(*format::consts::FORMAT_BOX_CHARS);
 
-                                        // Header row
-                                        if let Some(metadata) = result_set.result_set_metadata() {
-                                            if let Some(columns) = &metadata.column_info {
-                                                let headers = columns
-                                                    .iter()
-                                                    .map(|c| Cell::new(&c.name).style_spec("Fb"))
-                                                    .collect::<Vec<Cell>>();
-                                                sample_table.add_row(Row::new(headers));
-                                            }
+                                    // Header row
+                                    if let Some(metadata) = result_set.result_set_metadata() {
+                                        if let Some(columns) = &metadata.column_info {
+                                            let headers = columns
+                                                .iter()
+                                                .map(|c| Cell::new(&c.name).style_spec("Fb"))
+                                                .collect::<Vec<Cell>>();
+                                            sample_table.add_row(Row::new(headers));
                                         }
-
-                                        // Data rows
-                                        for row in rows.iter().skip(1) {
-                                            if let Some(data) = &row.data {
-                                                let data_cells = data
-                                                    .iter()
-                                                    .map(|d| {
-                                                        Cell::new(
-                                                            d.var_char_value
-                                                                .as_deref()
-                                                                .unwrap_or(""),
-                                                        )
-                                                    })
-                                                    .collect();
-                                                sample_table.add_row(Row::new(data_cells));
-                                            }
-                                        }
-                                        sample_table.printstd();
                                     }
+
+                                    // Data rows
+                                    for row in rows.iter().skip(1) {
+                                        if let Some(data) = &row.data {
+                                            let data_cells = data
+                                                .iter()
+                                                .map(|d| {
+                                                    Cell::new(
+                                                        d.var_char_value.as_deref().unwrap_or(""),
+                                                    )
+                                                })
+                                                .collect();
+                                            sample_table.add_row(Row::new(data_cells));
+                                        }
+                                    }
+                                    sample_table.printstd();
                                 }
                             }
                         }

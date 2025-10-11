@@ -14,7 +14,7 @@ pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
     // Command-specific quiet overrides global setting
     let quiet_mode = args.quiet || ctx.quiet();
 
-    // Call both APIs in parallel for better performance
+    // Call all APIs in parallel for better performance
     let execution_future = client
         .get_query_execution()
         .query_execution_id(&query_id)
@@ -25,8 +25,27 @@ pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
         .query_execution_id(&query_id)
         .send();
 
-    let (execution_result, runtime_stats_result) =
-        tokio::join!(execution_future, runtime_stats_future);
+    // Only fetch sample results if not in quiet mode
+    let results_future = if !quiet_mode {
+        Some(
+            client
+                .get_query_results()
+                .query_execution_id(&query_id)
+                .max_results(11) // 10 rows + header
+                .send(),
+        )
+    } else {
+        None
+    };
+
+    let (execution_result, runtime_stats_result, results_result) =
+        tokio::join!(execution_future, runtime_stats_future, async {
+            if let Some(fut) = results_future {
+                Some(fut.await)
+            } else {
+                None
+            }
+        });
 
     // Process execution result - store the output to extend lifetime
     let execution_output = execution_result?;
@@ -35,23 +54,19 @@ pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("No query execution found with ID: {}", query_id))?;
 
     // Extract total rows from runtime statistics if query succeeded
-    let total_rows: Option<i64> = if let Some(status) = execution.status() {
-        if let Some(state) = status.state() {
-            if state.as_str() == "SUCCEEDED" {
-                if let Ok(runtime_stats_output) = runtime_stats_result {
-                    runtime_stats_output
-                        .query_runtime_statistics()
-                        .and_then(|stats| stats.rows())
-                        .and_then(|rows| rows.output_rows())
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        }
+    let is_succeeded = execution
+        .status()
+        .and_then(|status| status.state())
+        .map(|state| state.as_str() == "SUCCEEDED")
+        .unwrap_or(false);
+
+    let total_rows: Option<i64> = if is_succeeded {
+        runtime_stats_result.ok().and_then(|output| {
+            output
+                .query_runtime_statistics()
+                .and_then(|stats| stats.rows())
+                .and_then(|rows| rows.output_rows())
+        })
     } else {
         None
     };
@@ -105,50 +120,54 @@ pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
         table.printstd();
     }
 
-    // Check if query was successful before trying to get results
+    // Check if query was successful before trying to display results
     if let Some(status) = execution.status() {
         if let Some(state) = status.state() {
             if state.as_str() == "SUCCEEDED" {
                 if !quiet_mode {
-                    // Get sample of query results
-                    let results = client
-                        .get_query_results()
-                        .query_execution_id(&query_id)
-                        .max_results(11) // 10 rows + header
-                        .send()
-                        .await?;
+                    // Display sample results if we fetched them
+                    if let Some(results_opt) = results_result {
+                        if let Ok(results) = results_opt {
+                            if let Some(result_set) = results.result_set {
+                                if let Some(ref rows) = result_set.rows {
+                                    if !rows.is_empty() {
+                                        println!(
+                                            "\n{}",
+                                            "Query Result Sample (first 10 rows):".bold()
+                                        );
+                                        let mut sample_table = Table::new();
+                                        sample_table.set_format(*format::consts::FORMAT_BOX_CHARS);
 
-                    if let Some(result_set) = results.result_set {
-                        if let Some(ref rows) = result_set.rows {
-                            if !rows.is_empty() {
-                                println!("\n{}", "Query Result Sample (first 10 rows):".bold());
-                                let mut sample_table = Table::new();
-                                sample_table.set_format(*format::consts::FORMAT_BOX_CHARS);
+                                        // Header row
+                                        if let Some(metadata) = result_set.result_set_metadata() {
+                                            if let Some(columns) = &metadata.column_info {
+                                                let headers = columns
+                                                    .iter()
+                                                    .map(|c| Cell::new(&c.name).style_spec("Fb"))
+                                                    .collect::<Vec<Cell>>();
+                                                sample_table.add_row(Row::new(headers));
+                                            }
+                                        }
 
-                                // Header row
-                                if let Some(metadata) = result_set.result_set_metadata() {
-                                    if let Some(columns) = &metadata.column_info {
-                                        let headers = columns
-                                            .iter()
-                                            .map(|c| Cell::new(&c.name).style_spec("Fb"))
-                                            .collect::<Vec<Cell>>();
-                                        sample_table.add_row(Row::new(headers));
+                                        // Data rows
+                                        for row in rows.iter().skip(1) {
+                                            if let Some(data) = &row.data {
+                                                let data_cells = data
+                                                    .iter()
+                                                    .map(|d| {
+                                                        Cell::new(
+                                                            d.var_char_value
+                                                                .as_deref()
+                                                                .unwrap_or(""),
+                                                        )
+                                                    })
+                                                    .collect();
+                                                sample_table.add_row(Row::new(data_cells));
+                                            }
+                                        }
+                                        sample_table.printstd();
                                     }
                                 }
-
-                                // Data rows
-                                for row in rows.iter().skip(1) {
-                                    if let Some(data) = &row.data {
-                                        let data_cells = data
-                                            .iter()
-                                            .map(|d| {
-                                                Cell::new(d.var_char_value.as_deref().unwrap_or(""))
-                                            })
-                                            .collect();
-                                        sample_table.add_row(Row::new(data_cells));
-                                    }
-                                }
-                                sample_table.printstd();
                             }
                         }
                     }

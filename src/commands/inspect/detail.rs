@@ -1,10 +1,11 @@
 use super::download::download_from_s3;
-use super::fields::{get_field_value, get_inspect_fields};
+use super::fields::{get_field_value, get_inspect_fields, InspectField};
 use crate::cli::InspectArgs;
 use crate::context::Context;
 use anyhow::Result;
 use aws_sdk_s3;
 use owo_colors::OwoColorize;
+use polars::prelude::*;
 use prettytable::{format, Cell, Row, Table};
 
 pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
@@ -14,23 +15,66 @@ pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
     // Command-specific quiet overrides global setting
     let quiet_mode = args.quiet || ctx.quiet();
 
-    if !quiet_mode {
-        println!("\n{}", "Query Execution Details".bold());
-        println!("ID: {}\n", query_id.bright_green());
-    }
-
-    // Get query execution details
-    let result = client
+    // Call all APIs in parallel for better performance
+    let execution_future = client
         .get_query_execution()
         .query_execution_id(&query_id)
-        .send()
-        .await?;
+        .send();
 
-    let execution = result
+    let runtime_stats_future = client
+        .get_query_runtime_statistics()
+        .query_execution_id(&query_id)
+        .send();
+
+    // Only fetch sample results if not in quiet mode
+    let results_future = if !quiet_mode {
+        Some(
+            client
+                .get_query_results()
+                .query_execution_id(&query_id)
+                .max_results(11) // 10 rows + header
+                .send(),
+        )
+    } else {
+        None
+    };
+
+    let (execution_result, runtime_stats_result, results_result) =
+        tokio::join!(execution_future, runtime_stats_future, async {
+            if let Some(fut) = results_future {
+                Some(fut.await)
+            } else {
+                None
+            }
+        });
+
+    // Process execution result - store the output to extend lifetime
+    let execution_output = execution_result?;
+    let execution = execution_output
         .query_execution()
         .ok_or_else(|| anyhow::anyhow!("No query execution found with ID: {}", query_id))?;
 
+    // Extract total rows from runtime statistics if query succeeded
+    let is_succeeded = execution
+        .status()
+        .and_then(|status| status.state())
+        .map(|state| state.as_str() == "SUCCEEDED")
+        .unwrap_or(false);
+
+    let total_rows: Option<i64> = if is_succeeded {
+        runtime_stats_result.ok().and_then(|output| {
+            output
+                .query_runtime_statistics()
+                .and_then(|stats| stats.rows())
+                .and_then(|rows| rows.output_rows())
+        })
+    } else {
+        None
+    };
+
     if !quiet_mode {
+        println!("\n{}", "Query Execution Details".bold());
+        println!("ID: {}\n", query_id.bright_green());
         // Create a table for the query information
         let mut table = Table::new();
 
@@ -48,14 +92,22 @@ pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
 
         // Add rows for each field
         for field in fields {
-            let value = get_field_value(execution, field);
-            let formatted_value = match field.to_string().as_str() {
-                "Status" => match value.as_str() {
+            let value = if field == InspectField::TotalRows {
+                total_rows
+                    .map(|c| c.to_string())
+                    .unwrap_or_else(|| "N/A".to_string())
+            } else {
+                get_field_value(execution, field)
+            };
+
+            let formatted_value = match field {
+                InspectField::Status => match value.as_str() {
                     "SUCCEEDED" => value.bright_green().to_string(),
                     "FAILED" => value.bright_red().to_string(),
                     _ => value.yellow().to_string(),
                 },
-                "Data Scanned" => value.bright_cyan().to_string(),
+                InspectField::DataScanned => value.bright_cyan().to_string(),
+                InspectField::TotalRows => value.bright_magenta().to_string(),
                 _ => value,
             };
 
@@ -69,10 +121,80 @@ pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
         table.printstd();
     }
 
-    // Check if query was successful before trying to get results
+    // Check if query was successful before trying to display results
     if let Some(status) = execution.status() {
         if let Some(state) = status.state() {
             if state.as_str() == "SUCCEEDED" {
+                if !quiet_mode {
+                    // Display sample results if we fetched them
+                    if let Some(Ok(results)) = results_result {
+                        if let Some(result_set) = results.result_set {
+                            if let Some(ref rows) = result_set.rows {
+                                if rows.len() > 1 {
+                                    // Skip header row and build DataFrame
+                                    println!("\n{}", "Query Result Sample (first 10 rows):".bold());
+
+                                    // Extract column names from first row
+                                    let column_names: Vec<String> =
+                                        if let Some(first_row) = rows.first() {
+                                            if let Some(data) = &first_row.data {
+                                                data.iter()
+                                                    .map(|d| {
+                                                        d.var_char_value
+                                                            .as_deref()
+                                                            .unwrap_or("")
+                                                            .to_string()
+                                                    })
+                                                    .collect()
+                                            } else {
+                                                Vec::new()
+                                            }
+                                        } else {
+                                            Vec::new()
+                                        };
+
+                                    if !column_names.is_empty() {
+                                        // Initialize column vectors
+                                        let mut all_columns: Vec<Vec<String>> =
+                                            vec![Vec::new(); column_names.len()];
+
+                                        // Collect data rows (skip header)
+                                        for row in rows.iter().skip(1) {
+                                            if let Some(data) = &row.data {
+                                                for (i, datum) in data.iter().enumerate() {
+                                                    if i < all_columns.len() {
+                                                        all_columns[i].push(
+                                                            datum
+                                                                .var_char_value
+                                                                .as_deref()
+                                                                .unwrap_or("")
+                                                                .to_string(),
+                                                        );
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Build DataFrame
+                                        let series: Vec<Column> = all_columns
+                                            .iter()
+                                            .zip(column_names.iter())
+                                            .map(|(col, name)| {
+                                                Series::new(name.into(), col).into_column()
+                                            })
+                                            .collect();
+
+                                        match DataFrame::new(series) {
+                                            Ok(df) => println!("{}", df),
+                                            Err(e) => println!("Error creating DataFrame: {}", e),
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // If output option is provided, download results from S3
                 if let Some(output_dir) = &args.output {
                     let s3_output_location = execution

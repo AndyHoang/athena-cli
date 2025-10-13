@@ -24,6 +24,7 @@ pub enum InspectField {
     QueryQueueTime,
     ServiceProcessingTime,
     OutputLocation,
+    TotalRows,
 }
 
 // Add FromStr implementation for parsing from config
@@ -49,6 +50,7 @@ impl FromStr for InspectField {
             "QueryQueueTime" => Ok(InspectField::QueryQueueTime),
             "ServiceProcessingTime" => Ok(InspectField::ServiceProcessingTime),
             "OutputLocation" => Ok(InspectField::OutputLocation),
+            "TotalRows" => Ok(InspectField::TotalRows),
             _ => Err(format!("Unknown inspect field: {}", s)),
         }
     }
@@ -74,6 +76,7 @@ impl fmt::Display for InspectField {
             InspectField::QueryQueueTime => write!(f, "Query Queue Time"),
             InspectField::ServiceProcessingTime => write!(f, "Service Processing Time"),
             InspectField::OutputLocation => write!(f, "Output Location"),
+            InspectField::TotalRows => write!(f, "Total Rows"),
         }
     }
 }
@@ -91,6 +94,7 @@ pub fn default_inspect_fields() -> Vec<InspectField> {
         InspectField::Catalog,
         InspectField::Workgroup,
         InspectField::DataScanned,
+        InspectField::TotalRows,
         InspectField::CacheStatus,
         InspectField::EngineExecutionTime,
         InspectField::TotalExecutionTime,
@@ -207,5 +211,6 @@ pub fn get_field_value(execution: &QueryExecution, field: InspectField) -> Strin
             .result_configuration()
             .and_then(|c| c.output_location())
             .to_display_value_or_default(),
+        InspectField::TotalRows => "".to_string(),
     }
 }

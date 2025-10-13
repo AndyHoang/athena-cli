@@ -5,6 +5,7 @@ use crate::context::Context;
 use anyhow::Result;
 use aws_sdk_s3;
 use owo_colors::OwoColorize;
+use polars::prelude::*;
 use prettytable::{format, Cell, Row, Table};
 
 pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
@@ -129,37 +130,65 @@ pub async fn detail(ctx: &Context, args: &InspectArgs) -> Result<()> {
                     if let Some(Ok(results)) = results_result {
                         if let Some(result_set) = results.result_set {
                             if let Some(ref rows) = result_set.rows {
-                                if !rows.is_empty() {
+                                if rows.len() > 1 {
+                                    // Skip header row and build DataFrame
                                     println!("\n{}", "Query Result Sample (first 10 rows):".bold());
-                                    let mut sample_table = Table::new();
-                                    sample_table.set_format(*format::consts::FORMAT_BOX_CHARS);
 
-                                    // Header row
-                                    if let Some(metadata) = result_set.result_set_metadata() {
-                                        if let Some(columns) = &metadata.column_info {
-                                            let headers = columns
-                                                .iter()
-                                                .map(|c| Cell::new(&c.name).style_spec("Fb"))
-                                                .collect::<Vec<Cell>>();
-                                            sample_table.add_row(Row::new(headers));
+                                    // Extract column names from first row
+                                    let column_names: Vec<String> =
+                                        if let Some(first_row) = rows.first() {
+                                            if let Some(data) = &first_row.data {
+                                                data.iter()
+                                                    .map(|d| {
+                                                        d.var_char_value
+                                                            .as_deref()
+                                                            .unwrap_or("")
+                                                            .to_string()
+                                                    })
+                                                    .collect()
+                                            } else {
+                                                Vec::new()
+                                            }
+                                        } else {
+                                            Vec::new()
+                                        };
+
+                                    if !column_names.is_empty() {
+                                        // Initialize column vectors
+                                        let mut all_columns: Vec<Vec<String>> =
+                                            vec![Vec::new(); column_names.len()];
+
+                                        // Collect data rows (skip header)
+                                        for row in rows.iter().skip(1) {
+                                            if let Some(data) = &row.data {
+                                                for (i, datum) in data.iter().enumerate() {
+                                                    if i < all_columns.len() {
+                                                        all_columns[i].push(
+                                                            datum
+                                                                .var_char_value
+                                                                .as_deref()
+                                                                .unwrap_or("")
+                                                                .to_string(),
+                                                        );
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Build DataFrame
+                                        let series: Vec<Column> = all_columns
+                                            .iter()
+                                            .zip(column_names.iter())
+                                            .map(|(col, name)| {
+                                                Series::new(name.into(), col).into_column()
+                                            })
+                                            .collect();
+
+                                        match DataFrame::new(series) {
+                                            Ok(df) => println!("{}", df),
+                                            Err(e) => println!("Error creating DataFrame: {}", e),
                                         }
                                     }
-
-                                    // Data rows
-                                    for row in rows.iter().skip(1) {
-                                        if let Some(data) = &row.data {
-                                            let data_cells = data
-                                                .iter()
-                                                .map(|d| {
-                                                    Cell::new(
-                                                        d.var_char_value.as_deref().unwrap_or(""),
-                                                    )
-                                                })
-                                                .collect();
-                                            sample_table.add_row(Row::new(data_cells));
-                                        }
-                                    }
-                                    sample_table.printstd();
                                 }
                             }
                         }

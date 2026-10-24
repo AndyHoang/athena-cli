@@ -15,7 +15,7 @@ authors = ["Andy Hoang <ngocdunghoangdl@gmail.com>"]
 clap = { version = "4.4", features = ["derive"] }
 aws-config = "1.1.1"
 aws-sdk-athena = "1.94.0"
-aws-sdk-s3 = "1.9.0"
+aws-sdk-s3 = "1.112.0"
 tokio = { version = "1.36", features = ["full"] }
 anyhow = "1.0"
 prettytable-rs = "0.10"

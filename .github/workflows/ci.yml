@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
@@ -30,7 +30,7 @@ jobs:
         components: clippy
 
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           ~/.cargo/registry
